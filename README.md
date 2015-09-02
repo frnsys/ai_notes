@@ -1,17 +1,30 @@
+__To see the notes, look at `notes.pdf`__
+
 This is a collection of my machine learning and artificial intelligence notes. It's very much a work-in-progress and large portions are very disorganized. I have tried to be diligent about references but a lot of them, especially earlier ones, may have fallen through the cracks...if I forgot to cite someone, let me know or submit a PR.
 
 The source files for the graphics are in the `graphics` folder, which includes an iPython notebook for the graphics generated with `matplotlib`/`seaborn` and Illustrator files for the others (in the `illustrations` directory).
 
 I have not included the fonts (some of them are copyrighted or something) - in a later update I will use open source fonts so they aren't an issue. For now, just refer to the pre-compiled PDF, `notes.pdf`.
 
+
+## Styling:
+
+- Main font family: Bembo
+- Text font family: Source Sans Pro
+- Figure sans-serif font family: Calibre
+
+To use LaTeX equations with Adobe Illustrator, use LaTeXiT!, and in the General Tab of its Preferences, select "PDF with outlined fonts". Then you can type in LaTeX equations, hit "LaTeX it!", and drag-and-drop the result into Illustrator. [tip from here](https://www.quora.com/How-do-I-import-LaTeX-equations-and-symbols-into-Adobe-Illustrator)
+
 ## Compiling
 
-Compile prereqs:
+To compile, just run `./compile.sh`.
+
+You need the following prerequisites:
 
 OSX:
 
     brew install pandoc librsvg
-    # Also: [MacTex](https://tug.org/mactex/)
+    # Also install: [MacTex](https://tug.org/mactex/)
 
 Linux (using `apt`):
 
