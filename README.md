@@ -9,7 +9,7 @@ I have not included the fonts (some of them are copyrighted or something) - in a
 
 ## Styling:
 
-- Main font family: Bembo
+- Main font family: Lato
 - Text font family: Source Sans Pro
 - Figure sans-serif font family: Calibre
 

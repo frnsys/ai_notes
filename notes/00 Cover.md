@@ -7,7 +7,7 @@ header-includes:
     - \newcommand{\argmin}{\operatorname*{argmin}}
     - \raggedbottom
 #   - \setmainfont[BoldFont = SourceSansPro-Semibold.ttf, ItalicFont = SourceSansPro-It.ttf, BoldItalicFont = SourceSansPro-SemiboldIt.ttf]{SourceSansPro-Regular.ttf}
-    - \setmainfont[BoldFont = BemboStd-Semibold.otf, ItalicFont = BemboStd-Italic.otf, BoldItalicFont = BemboStd-SemiboldItalic.otf]{BemboStd.otf}
+    - \setmainfont[BoldFont = Lato-Bold.ttf, ItalicFont = Lato-Italic.ttf, BoldItalicFont = Lato-BoldItalic.ttf]{Lato-Regular.ttf}
     - \setmonofont{Inconsolata-g for Powerline.otf}
 toc: yes
 geometry: margin=0.75in

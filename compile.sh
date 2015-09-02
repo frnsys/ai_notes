@@ -1,5 +1,8 @@
-SRC=notes
-OUT=book.pdf
+DIR=$PWD
+SRC=$DIR/notes
+OUT=$DIR/notes.pdf
+CMP=$DIR/compile
+WRK=/tmp/ml_ai_notes
 
 echo "Compiling..."
 
@@ -8,9 +11,10 @@ cd $SRC/assets
 for svg in *.svg; do
     rsvg-convert "$svg" -f pdf -o "${svg%.*}.pdf"
 done
-cd $OLDPWD
-
 cd $SRC
+
+# Create working directory
+mkdir -p $WRK
 
 # Insert pagebreaks between documents.
 for f in *.md; do
@@ -19,8 +23,17 @@ for f in *.md; do
 # Compile the notes.
 # Remove newcommands (you should consolidate them elsewhere, see README.md)
 # Replaces references to svg files with pdf references.
-done | sed "s/^\\\newcommand.*//g" | sed "s/\(!\[.*\](.*.\)svg\()\)/\1pdf\2/g" | pandoc -s --latex-engine=xelatex --template=template.latex --mathjax -o $OLDPWD/$OUT
-cd $OLDPWD
+done | sed "s/^\\\newcommand.*//g" | sed "s/\(!\[.*\](.*.\)svg\()\)/\1pdf\2/g" > $WRK/ml_ai_notes.md
+
+# Copy things over to working directory (bleh)
+cp $CMP/template.latex $WRK/
+cp $CMP/fonts/{*.otf,*.ttf} $WRK/
+
+#rm $WRK/assets
+ln -sfn $SRC/assets/ $WRK/assets
+
+cd $WRK
+pandoc -s ml_ai_notes.md --latex-engine=xelatex --template=template.latex --mathjax -o $OUT
 
 echo "Compiled."
 
