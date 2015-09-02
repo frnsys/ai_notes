@@ -4,9 +4,6 @@ This is a collection of my machine learning and artificial intelligence notes. I
 
 The source files for the graphics are in the `graphics` folder, which includes an iPython notebook for the graphics generated with `matplotlib`/`seaborn` and Illustrator files for the others (in the `illustrations` directory).
 
-I have not included the fonts (some of them are copyrighted or something) - in a later update I will use open source fonts so they aren't an issue. For now, just refer to the pre-compiled PDF, `notes.pdf`.
-
-
 ## Styling:
 
 - Main font family: Lato
