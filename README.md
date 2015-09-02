@@ -1,5 +1,7 @@
 This is a collection of my machine learning and artificial intelligence notes. It's very much a work-in-progress and large portions are very disorganized. I have tried to be diligent about references but a lot of them, especially earlier ones, may have fallen through the cracks...if I forgot to cite someone, let me know or submit a PR.
 
+The source files for the graphics are in the `graphics` folder, which includes an iPython notebook for the graphics generated with `matplotlib`/`seaborn` and Illustrator files for the others (in the `illustrations` directory).
+
 I have not included the fonts (some of them are copyrighted or something) - in a later update I will use open source fonts so they aren't an issue. For now, just refer to the pre-compiled PDF, `notes.pdf`.
 
 ## Compiling
