@@ -51,12 +51,9 @@ Linux (using `apt`):
     # then install with gdebi:
     # sudo gdebi pandoc-*.deb
 
-`sleep_until_modified.py` is from [denilsonsa](https://bitbucket.org/denilsonsa/small_scripts/src/b20d762b9c1a0d250ddbd8e26850df62d84b1559/sleep_until_modified.py?at=default).
-
-
 ## Notes
 
-- don't have line breaks in your mathjax blocks, latex will fail on them
+- don't have empty line breaks in your mathjax blocks, latex will fail on them
 - if you have any `newcommand`s, include them in the individual markdown files that need them. The script will automatically remove these (since redundant ones mess up latex), so also set up a yaml header for pandoc to use in one of your markdown files, for example:
 
 ```
