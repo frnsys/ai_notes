@@ -1,0 +1,18 @@
+
+# Data Visualization
+
+## Bivariate charts
+
+_Bivariate charts_ display information about the relationship between _two_ variables. This includes scatterplots and line graphs.
+
+## Histograms
+
+When you have continuous data, you can get a sense of the data's density around values using a histogram. A histogram breaks your data up into __bins__, so that values falling within each bin are grouped together. Then the number of values (i.e. the frequency of values) in each bin is plotted out like a bar chart. This helps provide a sense of how the data is distributed.
+
+## Scatterplots
+
+Scatterplots plot out each individual data point (according to two dimensions) and can provide intuitions into correlation of the plotted dimensions, amongst other things.
+
+## References
+
+- OpenIntro Statistics, Second Edition. David M Diez, Christopher D Barr, Mine Çetinkaya-Rundel.
