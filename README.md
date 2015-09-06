@@ -2,9 +2,15 @@ __To see the notes, look at `notes.pdf`__
 
 This is a collection of my machine learning and artificial intelligence notes. It's very much a work-in-progress and large portions are very disorganized. I have tried to be diligent about references but a lot of them, especially earlier ones, may have fallen through the cracks...if I forgot to cite someone, let me know or submit a PR.
 
+## Graphics
+
 The source files for the graphics are in the `graphics` folder, which includes an iPython notebook for the graphics generated with `matplotlib`/`seaborn` and Illustrator files for the others (in the `illustrations` directory).
 
-## Styling:
+Included is an Illustrator script, `multiexporter.jsx`, sourced from <https://gist.github.com/TomByrne/7816376>, which makes it easy to export all layers as SVG simultaneously.
+
+On OSX, copy the script to `~/Applications/Adobe Illustrator/CS6/Presets/en_US/Scripts/`, then it will be available in `File > Scripts`.
+
+## Styling
 
 - Main font family: Lato
 - Text font family: Source Sans Pro
