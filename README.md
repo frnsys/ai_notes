@@ -14,7 +14,7 @@ When exporting Illustrator files as SVG, you should set "Type: Convert to Outlin
 - Main font family: Lato
 - Text font family: Source Sans Pro
 - Figure sans-serif font family: Calibre
-- Math: URW Garamond
+- Math: cmbright
 
 To use LaTeX equations with Adobe Illustrator, use LaTeXiT!, and in the General Tab of its Preferences, select "PDF with outlined fonts". Then you can type in LaTeX equations, hit "LaTeX it!", and drag-and-drop the result into Illustrator. [tip from here](https://www.quora.com/How-do-I-import-LaTeX-equations-and-symbols-into-Adobe-Illustrator)
 
@@ -85,12 +85,6 @@ Linux (using `apt`):
     # https://github.com/jgm/pandoc/releases
     # then install with gdebi:
     # sudo gdebi pandoc-*.deb
-
-For URW Garamond math:
-
-    wget http://tug.org/fonts/getnonfreefonts/install-getnonfreefonts
-    sudo texlua install-getnonfreefonts
-    sudo getnonfreefonts-sys garamond garamondx
 
 ## Notes
 
