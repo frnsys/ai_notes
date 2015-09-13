@@ -134,7 +134,7 @@ if __name__ == '__main__':
     nn.train(X, y, verbose=True)
 
 
-# TO DO implement for regression
+# TODO implement for regression
 # if __name__ == '__main__':
     # n_samples = 1000
     # n_dimensions = 3
