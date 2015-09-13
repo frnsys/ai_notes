@@ -9,7 +9,15 @@ $if(linestretch)$
 \usepackage{setspace}
 \setstretch{$linestretch$}
 $endif$
+
 \usepackage{amssymb,amsmath}
+%\usepackage[utopia]{mathdesign}
+%\usepackage[charter]{mathdesign}
+\usepackage{cmbright}
+
+% requires that you `sudo getnonfreefonts-sys garamond garamondx`
+%\usepackage[urw-garamond]{mathdesign}
+
 \usepackage{ifxetex,ifluatex}
 \usepackage{fixltx2e} % provides \textsubscript
 \ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
@@ -107,16 +115,53 @@ $endif$
 $if(tables)$
 \usepackage{longtable,booktabs}
 $endif$
+
+% Colors
+\definecolor{light-gray}{gray}{0.85}
+\definecolor{caption}{RGB}{172,172,188}
+\definecolor{math}{RGB}{61,61,73}
+
+% Color all math
+\everymath{\color{math}}
+\everydisplay{\color{math}}
+
+\usepackage{needspace}
+\needspace{6em}% Require at least 6em on the page
+
 $if(graphics)$
-\usepackage{graphicx,grffile}
+\usepackage{wrapfig}
+\usepackage{graphicx}
+
+% Hides the figure numbers
+\usepackage[labelformat=empty]{caption}
+
+% Smaller captions (for even smaller, use `scriptsize`, for a bit bigger, use `small`)
+% See <http://texdoc.net/texmf-dist/doc/latex/caption/caption-eng.pdf>
+\usepackage[font={footnotesize,color=caption}]{caption}
+% Redefine \includegraphics so that, unless explicit options are
+% given, the image width will not exceed the width or the height of the page.
+% Images get their normal width if they fit onto the page, but
+% are scaled down if they would overflow the margins.
+% Also - scale all graphics by 0.75.
 \makeatletter
-\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
-\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\def\ScaleWidthIfNeeded{%
+ \ifdim\Gin@nat@width>\linewidth
+    0.95\linewidth
+  \else
+    %0.75\Gin@nat@width
+    0.9\Gin@nat@width
+  \fi
+}
+\def\ScaleHeightIfNeeded{%
+  \ifdim\Gin@nat@height>0.9\textheight
+    0.95\textheight
+  \else
+    %0.75\Gin@nat@width
+    0.9\Gin@nat@width
+  \fi
+}
 \makeatother
-% Scale images if necessary, so that they will not overflow the page
-% margins by default, and it is still possible to overwrite the defaults
-% using explicit options in \includegraphics[width, height, ...]{}
-\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\setkeys{Gin}{width=\ScaleWidthIfNeeded,height=\ScaleHeightIfNeeded,keepaspectratio}%
 $endif$
 $if(links-as-notes)$
 % Make links footnotes instead of hotlinks:
@@ -144,11 +189,9 @@ $endif$
 % Add different font to be used in headings
 \newfontfamily{\HeadingFont}[
     ItalicFont = SourceSansPro-ExtraLightIt.ttf,
-    BoldFont = SourceSansPro-Semibold.ttf
+    BoldFont = SourceSansPro-Semibold.ttf,
+    BoldItalicFont = SourceSansPro-SemiboldIt.ttf
 ]{SourceSansPro-ExtraLight.ttf}
-
-% Colors
-\definecolor{light-gray}{gray}{0.85}
 
 % Headers and footers
 \usepackage{fancyhdr}
@@ -187,11 +230,12 @@ $endfor$
 \titleformat{\section}
     {\HeadingFont\huge}{\thesection}{1em}{}
 \titleformat{\subsection}
-    {\HeadingFont\LARGE}{\thesubsection}{1em}{}
+    {\HeadingFont\Large\bfseries}{\thesubsection}{1em}{}
 \titleformat{\subsubsection}
-    {\HeadingFont\Large}{\thesubsubsection}{1em}{}
-%\titleformat{\paragraph}
-    %{\HeadingFont\large}{\thesection}{1em}{}
+    {\HeadingFont\large\bfseries}{\thesubsubsection}{1em}{}
+\titleformat{\paragraph}
+    {\HeadingFont\normalsize\bfseries}{\thesection}{1em}{}
+\titlespacing\paragraph{0pt}{12pt plus 4pt minus 2pt}{-25pt plus 2pt minus 2pt}
 %\titleformat{\subparagraph}
     %{\normalsize\bfseries}{\thesection}{1em}{}
 

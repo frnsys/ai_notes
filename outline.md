@@ -1,0 +1,27 @@
+- Introduction
+- Foundations
+    - Linear Algebra
+    - Calculus
+    - Probability
+    - Statistics
+        - Classical
+        - Bayesian
+        - PGMs
+    - Optimization
+- Machine Learning
+    - Supervised learning
+    - Unsupervised learning
+    - Other learning (?)
+    - Neural networks
+    - Natural language processing
+- Artificial Intelligence
+    - Logical reasoning (?)
+    - Search
+    - Planning
+- Simulation (?)
+- Practice
+    - Process
+    - Visualization
+    - Implementations
+- Appendices
+    - `pandas`

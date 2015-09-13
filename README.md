@@ -2,27 +2,46 @@ __To see the notes, look at `notes.pdf`__
 
 This is a collection of my machine learning and artificial intelligence notes. It's very much a work-in-progress and large portions are very disorganized. I have tried to be diligent about references but a lot of them, especially earlier ones, may have fallen through the cracks...if I forgot to cite someone, let me know or submit a PR.
 
+
 ## Graphics
 
 The source files for the graphics are in the `graphics` folder, which includes an iPython notebook for the graphics generated with `matplotlib`/`seaborn` and Illustrator files for the others (in the `illustrations` directory).
 
-Included is an Illustrator script, `multiexporter.jsx`, sourced from <https://gist.github.com/TomByrne/7816376>, which makes it easy to export all layers as SVG simultaneously.
-
-On OSX, copy the script to `~/Applications/Adobe Illustrator/CS6/Presets/en_US/Scripts/`, then it will be available in `File > Scripts`.
+When exporting Illustrator files as SVG, you should set "Type: Convert to Outline" to preserve the fonts.
 
 ## Styling
 
 - Main font family: Lato
 - Text font family: Source Sans Pro
 - Figure sans-serif font family: Calibre
+- Math: URW Garamond
 
 To use LaTeX equations with Adobe Illustrator, use LaTeXiT!, and in the General Tab of its Preferences, select "PDF with outlined fonts". Then you can type in LaTeX equations, hit "LaTeX it!", and drag-and-drop the result into Illustrator. [tip from here](https://www.quora.com/How-do-I-import-LaTeX-equations-and-symbols-into-Adobe-Illustrator)
 
+This is the preamble for LaTeXiT! (set in Preferences > Templates):
+
+    \documentclass[10pt]{article}
+    \usepackage[usenames]{color} %used for font color
+    \usepackage{amssymb} %maths
+    \usepackage{amsmath} %maths
+    \usepackage{cmbright}
+    \usepackage[utf8]{inputenc} %useful to type directly diacritic characters
+
+
+## Conventions
+
+- New terms are introduced in __bold__
+
+
 ## Compiling
 
-To compile, just run `./compile.sh`.
+To compile, just run `./compile.sh <pdf|html>`.
 
-You need the following prerequisites:
+To compile the HTML version, you must have the following installed:
+
+    sudo pip install pyyaml py-gfm
+
+To compile the PDF, you need the following prerequisites:
 
 OSX:
 
@@ -67,23 +86,16 @@ Linux (using `apt`):
     # then install with gdebi:
     # sudo gdebi pandoc-*.deb
 
+For URW Garamond math:
+
+    wget http://tug.org/fonts/getnonfreefonts/install-getnonfreefonts
+    sudo texlua install-getnonfreefonts
+    sudo getnonfreefonts-sys garamond garamondx
+
 ## Notes
 
-- don't have empty line breaks in your mathjax blocks, latex will fail on them
-- if you have any `newcommand`s, include them in the individual markdown files that need them. The script will automatically remove these (since redundant ones mess up latex), so also set up a yaml header for pandoc to use in one of your markdown files, for example:
-
-```
----
-title: Artificial Intelligence Notes
-author: Francis Tseng
-header-includes:
-    - \newcommand{\argmax}{\operatorname*{argmax}}
-    - \newcommand{\argmin}{\operatorname*{argmin}}
-toc: yes
-abstract: "This is my abstract"
----
-```
-
+- Don't have empty line breaks in your MathJax blocks, LaTeX will fail on them.
+- If you need any custom math commands, use either `\DeclareMathOperator` or `\providecommand`. The postprocessing script (`compile/postprocess.py`) will identify these, hoist them to the YAML frontmatter, and properly clean up redundant definitions.
 
 Refer to:
 
