@@ -1,5 +1,6 @@
 - Introduction
 - Foundations
+    - Functions
     - Linear Algebra
     - Calculus
     - Probability
