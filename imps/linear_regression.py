@@ -6,6 +6,7 @@ Example implementation of multivariate linear regression using gradient descent.
 - theta = parameters
 - hyp = hypothesis (actually, the vector computed from the hypothesis function)
 """
+import data
 import numpy as np
 
 
@@ -46,20 +47,11 @@ def least_squares(X, y):
 
 
 if __name__ == '__main__':
-    def true_function(X):
-        """
-        Computes true outputs and true parameters (randomly generated)
-        """
-        # Create random parameters for X's dimensions, plus one for x_0.
-        true_theta = np.random.rand(X.shape[1] + 1)
-        return true_theta[0] + np.dot(true_theta[1:], X.T), true_theta
-
     # Create some random data
     # (cheating a little b/c we aren't adding any noise)
     n_samples = 2000
     n_dimensions = 5
-    X = np.random.rand(n_samples, n_dimensions)
-    y, true_theta = true_function(X)
+    X, y, true_theta = data.make_linear(n_samples, n_dimensions, intercept=True, noise_std=0.1)
 
     # Add a column of 1s for x_0
     ones = np.ones((n_samples, 1))

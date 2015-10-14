@@ -1,3 +1,4 @@
+import data
 import numpy as np
 
 
@@ -13,6 +14,18 @@ def tanh_deriv(X):
     # tanh deriv: 1 - tanh^2,
     return 1 - np.power(np.tanh(X), 2)
 
+def identity(X):
+    return X
+
+def identity_deriv(X):
+    return np.ones(X.shape)
+
+
+func_map = {
+    tanh: tanh_deriv,
+    identity: identity_deriv,
+}
+
 
 class Layer():
     def __init__(self, in_size, out_size, activation_func):
@@ -20,6 +33,11 @@ class Layer():
         self.weights = np.random.randn(in_size, out_size) / np.sqrt(in_size)
         self.bias = np.zeros((1, out_size))
         self.activation_func = activation_func
+        self.activation_deriv = func_map[activation_func]
+
+        self.in_size = in_size
+        self.out_size = out_size
+        self.name = activation_func.__name__
 
     def __call__(self, inputs):
         # cache last inputs for backprop
@@ -29,20 +47,21 @@ class Layer():
         # which uses the output of the previous layer,
         # then compute this layer's output through the activation func
         net = np.dot(inputs, self.weights) + self.bias
+        self.last_net = net
         return self.activation_func(net)
+
+    def __repr__(self):
+        return 'Layer(in={},out={},activation={})'.format(self.in_size,
+                                                          self.out_size,
+                                                          self.name)
 
 
 class NeuralNet():
-    def __init__(self, in_dim=2, hidden_dim=3, out_dim=2):
-        layer_sizes = [in_dim, hidden_dim]
+    def add(self, layer):
+        self.layers.append(layer)
 
-        # initialize layers
+    def __init__(self):
         self.layers = []
-        for in_size, next_size in zip(layer_sizes, layer_sizes[1:]):
-            self.layers.append(Layer(in_size, next_size, tanh))
-
-        output_layer = Layer(hidden_dim, out_dim, softmax)
-        self.layers.append(output_layer)
 
     def forward(self, X):
         # forward propagation
@@ -63,11 +82,11 @@ class NeuralNet():
             outs = self.forward(X)
 
             # backpropagation
-            err = outs[-1]
-            err[range(n), y] -= 1
+            # err = outs[-1]
+            # err[range(n), y] -= 1
 
             # for regression:
-            # err = y - outs[-1]
+            err = 2. * (y[:,None] - outs[-1]) / n
 
             dws = []
             dbs = []
@@ -75,7 +94,7 @@ class NeuralNet():
                 dw = (out.T).dot(err)
                 db = np.sum(err, axis=0, keepdims=True)
 
-                err = err.dot(l.weights.T) * tanh_deriv(l.last_inputs)
+                err = err.dot(l.weights.T) * l.activation_deriv(l.last_inputs)
 
                 # incorporate regularization term
                 dw += lmbda * l.weights
@@ -84,7 +103,6 @@ class NeuralNet():
                 dws.append(dw)
                 dbs.append(db)
 
-            # update the params
             # update the params
             for l, dw, db in zip(self.layers, reversed(dws), reversed(dbs)):
                 l.weights += -eta * dw
@@ -108,8 +126,11 @@ class NeuralNet():
         probs = outs[-1]
 
         # cross-entropy loss
-        logprobs = -np.log(probs[range(n), y])
-        the_loss = np.sum(logprobs)
+        # logprobs = -np.log(probs[range(n), y])
+        # the_loss = np.sum(logprobs)
+
+        # MSE
+        the_loss = np.square(np.sum(y[:,np.newaxis] - outs[-1]))
 
         # regularization term
         the_loss += lmbda/2 * sum(np.sum(np.square(l.weights)) for l in self.layers)
@@ -117,37 +138,28 @@ class NeuralNet():
         return 1/n * the_loss
 
 
-def true_function(X):
-    """
-    Computes true outputs (from randomly generated parameters)
-    """
-    # Create random parameters for X's dimensions, plus one for x_0.
-    true_theta = np.random.rand(X.shape[1] + 1)
-    return true_theta[0] + np.dot(true_theta[1:], X.T)
+def check_gradient():
+    eps = 0.0001
+    params = np.array([1,1,1])
+
+    # numerical gradient
+    num_grad = (cost(params + eps) - cost(params - eps)) / (2 * eps)
+
 
 
 if __name__ == '__main__':
-    from sklearn import datasets
-    X, y = datasets.make_moons(n_samples=200, noise=0.2)
 
-    nn = NeuralNet(in_dim=2, hidden_dim=3, out_dim=2)
-    nn.train(X, y, verbose=True)
-
-
-# TODO implement for regression
-# if __name__ == '__main__':
-    # n_samples = 1000
-    # n_dimensions = 3
-    # iterations = 100000
-
-    # print('Samples:', n_samples)
-    # print('Dimensions:', n_dimensions)
-    # print('Iterations:', iterations)
-
-    # # Prep sample data
-    # X = np.random.rand(n_samples, n_dimensions)
-    # y = true_function(X)
-    # y = np.array([y]).T
-
-    # nn = NeuralNet(in_dim=3, hidden_dim=3, out_dim=3)
+    # Classification
+    # X, y = data.make_moons(n_samples=200, noise_std=0.1)
+    # nn = NeuralNet()
+    # nn.add(Layer(2, 3, tanh))
+    # nn.add(Layer(3, 2, softmax))
     # nn.train(X, y, verbose=True)
+
+    # Regression
+    n_dimensions = 3
+    X, y, theta = data.make_linear(n_samples=200, n_dimensions=n_dimensions, noise_std=0.1)
+    nn = NeuralNet()
+    nn.add(Layer(n_dimensions, 3, tanh))
+    nn.add(Layer(3, 1, identity))
+    nn.train(X, y, verbose=True)
