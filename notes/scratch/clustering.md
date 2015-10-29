@@ -79,3 +79,89 @@ HDBSCAN is an improvement upon DBSCAN which can handle variable density clusters
 ## References
 
 - Comparing Python Clustering Algorithms. Leland McInnes. <http://nbviewer.ipython.org/github/lmcinnes/hdbscan/blob/master/notebooks/Comparing%20Clustering%20Algorithms.ipynb>
+
+
+---
+
+## HDBSCAN
+
+HDBSCAN uses single-linkage clustering, and a concern with single-linkage clustering is that some errant point between two clusters may accidentally act as a bridge between them, such that they are identified as a single cluster. HDBSCAN avoids this by first transforming the space in such a way that sparse points (these potentially troublesome noise points) are pushed further away.
+
+To do this, we first define a distance called the __core distance__, $\text{core}_k(x)$, which is point $x$'s distance from its $k$th nearest neighbor.
+
+Then we define a new distance metric based on these core distances, called __mutual reachability distance__. The mutual reachability distance $d_{\text{mreach}-k}$ between points $a$ and $b$ is the furthest of the following points: $\text{core}_k(a), \text{core}_k(b), d(a,b)$, where $d(a,b)$ is the regular distance metric between $a$ and $b$. More formally:
+
+$$
+d_{\text{mreach}-k}(a, b) = \max(\text{core}_k(a), \text{core}_k(b), d(a,b))
+$$
+
+For example, if $k=5$:
+
+![](assets/hdbscan_distance_01.svg)
+
+Then we can pick another point:
+
+![](assets/hdbscan_distance_02.svg)
+
+And another point:
+
+![](assets/hdbscan_distance_03.svg)
+
+Say we want to compute the mutual reachability distance between the blue $b$ and green $g$ points.
+
+First we can compute $d(b, g)$:
+
+![](assets/hdbscan_distance_04.svg)
+
+Which is larger than $\text{core}_k(b)$, but both are smaller than $\text{core}_k(g)$. So the mutual reachability distance between $b$ and $g$ is $\text{core}k(g)$:
+
+![](assets/hdbscan_distance_05.svg)
+
+On the other hand, the mutual reachability distance between the red and green points is equal to $d(r, g)$ because that is larger than either of their core distances.
+
+We build a distance matrix out of these mutual reachability distances; this is the transformed space. We can use this distance matrix to represent a graph of the points.
+
+We want to construct a minimum spanning tree out of this graph.
+
+As a reminder, a _spanning tree_ of a graph is any subgraph which contains all vertices and is a tree (a tree is a graph where vertices are connected by only one path; i.e. it is a connected graph - all vertices are connected - but there are no cycles).
+
+The weight of a tree is the sum of its edges' weights. A minimum spanning tree is a spanning tree with the least (or equal to least) weight.
+
+The minimum spanning tree of this graph can be constructed using Prim's algorithm.
+
+From this spanning tree, we then want to create the cluster hierarchy. This can be accomplished by sorting edges from closest to furthest and iterating over them, creating a merged cluster for each edge.
+
+(A note from the original post which I don't understand yet: "The only difficult part here is to identify the two clusters each edge will join together, but this is easy enough via a union-find data structure.")
+
+Given this hierarchy, we want a set of flat clusters. DBSCAN asks you to specify the number of clusters, but HDBSCAN can independently discover them. It does require, however, that you specify a minimum cluster size.
+
+In the produced hierarchy, it is often the case that a cluster splits into one large subcluster and a few independent points. Other times, the cluster splits into two good-sized clusters. The minimum cluster size makes explicit what a "good-sized" cluster is.
+
+If a cluster splits into clusters which are at or above the minimum cluster size, we consider them to be separate clusters. Otherwise, we don't split the cluster (we treat the other points as having "fallen out of" the parent cluster) and just keep the parent cluster intact. However, we keep track of which points have "fallen out" and at what distance that happened. This way we know at which distance cutoffs the cluster "sheds" points. We also keep track at what distances a cluster split into its children clusters.
+
+Using this approach, we "clean up" the hierarchy.
+
+We use the distances at which a cluster breaks up into subclusters to measure the _persistence_ of a cluster. Formally, we think in terms of $\lambda = \frac{1}{\text{distance}}$.
+
+We define for each cluster a $\lambda_{\text{birth}}$, which is the distance at which this cluster's parent split to yield this cluster, and a $\lambda_{\text{death}}$, which is the distance at which this cluster itself split into subclusters (if it does eventually split into subclusters).
+
+Then, for each point $p$ within a cluster, we define $\lambda_p$ to be when that point "fell out" of the cluster, which is either somewhere in between $\lambda_{\text{birth}}, \lambda_{\text{death}}$, or, if the point does not fall out of the cluster, it is just $\lambda_{\text{death}}$ (that is, it falls out when the cluster itself splits).
+
+The _stability_ of a cluster is simply:
+
+$$
+\sum_{p \in \text{cluster}} (\lambda_p - \lambda_{\text{birth}})
+$$
+
+Then we start with all the leaf nodes and select them as clusters. We move up the tree and sum the stabilities of each cluster's child clusters. Then:
+
+- If the sum of cluster's child stabilities _greater_ than its own stability, then we set its stability to be the sum of its child stabilities.
+- If the sum of a cluster's child stabilities is _less_ than its own stability, then we select the cluster and unselect its descendants.
+
+When we reach the root node, return the selected clusters. Points not in any of the selected clusters are considered noise.
+
+As a bonus: each $\lambda_p$ in the selected clusters can be treated as membership strength to the cluster if we normalize them.
+
+## References
+
+- How HDBSCAN Works. Leland McInnes. <http://nbviewer.jupyter.org/github/lmcinnes/hdbscan/blob/master/notebooks/How%20HDBSCAN%20Works.ipynb>

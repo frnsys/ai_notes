@@ -15,8 +15,8 @@ def make_linear(n_samples=2000, n_dimensions=3, intercept=True, noise_std=1., de
     if intercept:
         n_params += 1
 
-    # Create random parameters for X's dimensions, plus one for x_0.
-    theta = rnd.rand(n_dimensions + 1)
+    # Create random parameters for X
+    theta = rnd.rand(n_params)
     y = theta[0] + np.dot(theta[1:], X.T) + rnd.normal(0, noise_std, n_samples)
     return X, y, theta
 
