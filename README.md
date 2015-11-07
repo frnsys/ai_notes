@@ -39,7 +39,9 @@ To compile, just run `./compile.sh <pdf|html>`.
 
 To compile the HTML version, you must have the following installed:
 
-    sudo pip install pyyaml py-gfm
+    sudo pip install pyyaml py-gfm markdown
+
+in a Python 3 environment (you can use `virtualenv`).
 
 To compile the PDF, you need the following prerequisites:
 
