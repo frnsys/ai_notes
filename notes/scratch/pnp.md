@@ -48,3 +48,10 @@ Problems which are _NP-hard_ are at least as hard as NP problems, so this includ
 ## References
 
 - Beyond Computation: The P vs NP Problem. Michael Sipser, MIT. Tuesday, October 3, 2006. <https://www.youtube.com/watch?v=msp2y_Y5MLE>
+
+---
+
+To show that a problem is NP complete, you must:
+
+- Show that it is in NP: that is, show that there is a polynomial time algorithm that can verify whether or not an answer is correct
+- Show that it is NP-hard: that is, reduce some known NP-complete problem to your problem in polynomial time.

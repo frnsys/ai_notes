@@ -369,6 +369,509 @@ S_k &= S \forall k \in \{1, \dots, n\}
 \end{aligned}
 $$
 
-## References
+Then we define:
+
+$$
+r(y_{-1}, y_0, y_1, \dots, y_k) = \prod_{i=1}^k q(y_i|y_{i-2}, y_{i-1}) \prod_{i=1}^k e(x_i|y_i)
+$$
+
+This computes the probability from our HMM for a given sequence of tags, $y_{-1}, y_0, y_1, \dots, y_k$, but only up to the $k$th position.
+
+We define a dynamic programming table: $\pi(k,u,v)$ as the maximum probability of a tag sequence ending in tags $u, v$ at position $k$, i.e:
+
+$$
+\pi(k,u,v) = \max_{(y_{-1}, y_0, y_1, \dots, y_k):y_{k-1}=u,y_k=v} r(y_{-1}, y_0, y_1, \dots, y_k)
+$$
+
+To clarify: $k \in \{1, \dots, n\}, u \in S_{k-1}, v \in S_k$.
+
+For example: say we have the sentence "The man saw the dog with the telescope", which we re-write as "START START The Man saw the dog with the telescope". We'll set $S_k=\{D,N,V,P\}$ for $k \geq 1$ and $S_{-1}=S_0=\{*\}$.
+
+If we want to compute $\pi(7,P,D)$, then $k=7$ so then fix the 7th term with the $D$ tag and the $k-1$ term with the $P$ tag. Then we consider all possible tag sequences (ending with $P, D$) up to the 7th term (e.g. $*, D, N, V, P, P, P, D$ and so on) and get the probability of the most likely sequence.
+
+We can re-define the above recursively.
+
+The base case is $\pi(0, *, *) = 1$ since we always have the two START tokens tagged as $*$ at the beginning.
+
+Then, for any $k \in \{1, \dots, n\}$ for any $u \in S_{k-1}$ and $v \in S_k$:
+
+$$
+\pi(k, u, v) = \max_{w \in S_{k-2}} (\pi(k-1, w, u)q(v|w,u)e(x_k|v))
+$$
+
+The __Viterbi algorithm__ is just the application of this recursive definition while keeping backpointers to the tag sequences with max probability:
+
+- For $k=1, \dots, n$
+    - For $u \in S_{k-1}, v \in S_k$
+        - $\pi(k, u, v) = \max_{w \in S_{k-2}} (\pi(k-1, w, u)q(v|w,u)e(x_k|v))$
+        - $bp(k, u, v) = \argmax_{w \in S_{k-2}} (\pi(k-1, w, u)q(v|w,u)e(x_k|v))$
+- Set $(y_{n-1}, y_n) = \argmax_{(u,v)} (\pi(n,u,v)q(\text{STOP}|u,v))$
+- For $k=(n-2), \dots, 1, y_k = bp(k+2, y_{k_1}, y_{k+2})$
+- Return the tag sequence $y_1, \dots, y_n$
+
+It has the runtime $O(n|S|^3)$ because of the loop over $k$ value (for $k=1, \dots, n$, so this happens $n$ times), then its inner loops over $S$ twice (for $u \in S_{k-1}$ and for $v \in S_k$), with each loop searching over $|S|$.
+
+## The parsing problem
+
+The parsing problem takes some input sentence and outputs a __parse tree__ which describes the syntactic structure of the sentence.
+
+The leaf nodes of the tree are the words themselves, which are each tagged with a part-of-speech. Then these are grouped into phrases, such as noun phrases (NP) and verb phrases (VP), up to sentences (S) (these are sometimes called __constituents__).
+
+These parse trees can describe grammatical relationships such as subject-verb, verb-object, and so on.
+
+TODO parse tree example
+
+We can treat it as a supervised learning problem by using sentences annotated with parse trees (such data is usually called a "treebank").
+
+### Context-free grammars (CFGs)
+
+A formalism for the parsing problem.
+
+A context-free grammar is a four-tuple $G=(N, \Sigma, R, S)$ where:
+
+- $N$ is a set of non-terminal symbols
+- $\Sigma$ is a set of terminal symbols
+- $R$ is a set of rules of the form $X \to Y_1 Y_2 \dots Y_n$ for $n \geq 0, X \in N, Y_i \in (N \cup \Sigma)$
+- $S \in N$ is a distinguished start symbol
+
+An example CFG:
+
+- $N = \{\text{S}, \text{NP}, \text{VP}, \text{PP}, \text{DT}, \text{Vi}, \text{Vt}, \text{NN}, \text{IN}\}$
+- $S = \text{S}$
+- $\Sigma = \{\text{sleeps}, \text{saw}, \text{woman}, \text{telescope}, \text{the}, \text{with}, \text{in}\}$
+- $R$ is the following set of rules:
+    - $\text{S} \to \text{NP VP}$
+    - $\text{VP} \to \text{Vi}$
+    - $\text{VP} \to \text{Vt NP}$
+    - $\text{VP} \to \text{VP PP}$
+    - $\text{NP} \to \text{DT NN}$
+    - $\text{NP} \to \text{NP PP}$
+    - $\text{PP} \to \text{IN NP}$
+    - $\text{Vi} \to \text{sleeps}$
+    - $\text{Vt} \to \text{saw}$
+    - $\text{NN} \to \text{man}$
+    - $\text{NN} \to \text{woman}$
+    - $\text{NN} \to \text{telescope}$
+    - $\text{DT} \to \text{the}$
+    - $\text{IN} \to \text{with}$
+    - $\text{IN} \to \text{in}$
+
+Note:
+- S = sentence
+- VP = verb phrase
+- NP = noun phrase
+- PP = prepositional phrase
+- DT = determiner
+- Vi = intransitive verb
+- Vt = transitive verb
+- NN = noun
+- IN = preposition
+
+We can _derive_ sentences from this grammar.
+
+A __left-most derivation__  is a sequence of strings $s_1, \dots, s_n$ where:
+
+- $s_1 = S$, the start symbol
+- $s_n \in \Sigma^*$; that is, $s_n$ consists only of terminal symbols
+- each $s_i$ for $i=2, \dots, n$ is derived from $s_{i-1}$ by picking the left-most non-terminal $X$ in $s_{i-1}$ and replacing it with some $\beta$ where $X \to \beta$ is a rule in $R$.
+
+Using the example grammar, we could do:
+
+1. "S"
+2. expand "S" to "NP VP"
+3. expand "NP" (since it is the left-most symbol) to "D N", yielding "D N VP"
+4. expand "D" (again, it is left-most) to "the", yielding "the N VP"
+5. expand "N" (since the left-most symbol "the" is a terminal symbol) to "man", yielding "the man VP"
+6. expand "VP" to "Vi" (since it is the last non-terminal symbol), yielding "the man Vi"
+7. expand "Vi" to "sleeps", yielding "the man sleeps"
+8. the sentence consists only of terminal symbols, so we are done.
+
+Thus a CFG defines a set of possible derivations, which can be infinite.
+
+We say that a string $s \in \Sigma^*$ is in the _language_ defined by the CFG if we can derive it from the CFG.
+
+A string in a CFG may have multiple derivations - this property is called "ambiguity".
+
+For instance, "fruit flies like a banana" is ambiguous in that "fruit flies" may be a noun phrase or it may be a noun and a verb.
+
+### Probabilistic Context-Free Grammars (PCFGs)
+
+PCFGs are CFGs in which each rule is assigned a probability, which helps with the ambiguity problem. We can compute the probability of a particular derivation as the product of the probability of its rules.
+
+We notate the probability of a rule as $q(\alpha \to \beta)$. Note that we have individual probability distributions for the left-side of each rule, e.g. $\sum q(\text{VP} \to \beta) = 1, \sum q(\text{NP} \to \beta = 1$, and so on. Another way of saying this is these distributions are conditioned on the left-side of the rule.
+
+These probabilities can be learned from data as well, simply by counting all the rules in a treebank and using maximum likelihood estimates:
+
+$$
+q_\text{ML}(\alpha \to \beta) = \frac{\text{Count}(\alpha \to \beta)}{\text{Count}(\alpha)}
+$$
+
+Given a PCFG, a sentence $s$, and a set of trees which yield $s$ as $\Tau(s)$, we want to compute $\argmax_{t \in \Tau(s)} p(t)$. That is, given a sentence, what is the most likely parse tree to have produced this sentence?
+
+A challenge here is that $|\Tau(s)|$ may be very large, so brute-force search is not an option. We can use the __CKY algorithm__ instead.
+
+First we will assume the CFG is in Chomsky normal form. A CFG is in _Chomsky normal form_ if the rules in $R$ take one of two forms:
+
+- $X \to Y_1 Y_2$ for $X, Y_1, Y_2 \in N$
+- $X \to Y$ for $X \in N, Y \in \Sigma$
+
+In practice, any PCFG can be converted to an equivalent PCFG in Chomsky normal form by combining multiple symbols into single symbols (e.g. you can convert $\text{VP} \to \text{Vt NP PP}$ by defining a new symbol $\text{Vt-NP} \to \text{Vt NP}$ and then redefining $\text{VP} \to \text{Vt-NP PP}$).
+
+First, let's consider the problem $\max_{t \in \Tau(s)} p(t)$.
+
+Notation:
+
+- $n$ = number of words in the sentence
+- $w_i$ = the $i$th word in the sentence
+
+We define a dynamic programming table $\pi[i,j,X]$ which is the maximum probability of a constituent with non-terminal $X$ spanning the words $i, \dots, j$ inclusive. We set $i, j \in 1, \dots, n$ and $i \leq j$.
+
+We want to calculate $\max_{t \in \Tau(s) p(t)} = \pi[1,n,S]$, i.e. the max probability for a parse tree spanning the first through the last word of the sentence with the $S$ symbol.
+
+We will use a recursive definition of $\pi$.
+
+The base case is: for all $i = 1, \dots, n$ for $X \in N$, $\pi[i,i,X] = q(X \to w_i)$. If $X \to w_i$ is not in the grammar, then $q(X \to w_i) = 0$.
+
+The recursive definition is: for all $i = 1, \dots, (n-1)$ and $j = (i+1), \dots, n$ and $X \in N$:
+
+$$
+\pi(i,j,X) = \max_{X \to YZ \in R, s \in \{i,\dots,(j-1)\}} q(X \to YZ)\pi(i,s,Y)\pi(s+1,j,Z)
+$$
+
+$s$ is called the "split point" because it determines where the word sequence from $i$ to $j$ (inclusive) is split.
+
+The full CKY algorithm:
+
+Initialization: For all $i \in \{i, \dots, n\}$, for all $X \in N$:
+
+$$
+\pi(i,i,X) =
+\begin{cases}
+q(X \to x_i) & \text{if} X \to x_i \in R\\
+0 & \text{otherwise}
+\end{cases}
+$$
+
+Then:
+
+- For $l = 1, \dots, (n-1)$
+    - For $i = 1, \dots, (n-l)$
+        - Set $j = i+1$
+        - For all $X \in N$, calculate:
+
+$$
+\begin{aligned}
+\pi(i,j,X) &= \max_{X \to YZ \in R, s \in \{i,\dots,(j-1)\}} q(X \to YZ)\pi(i,s,Y)\pi(s+1,j,Z) \\
+bp(i,j,X) &= \argmax_{X \to YZ \in R, s \in \{i,\dots,(j-1)\}} q(X \to YZ)\pi(i,s,Y)\pi(s+1,j,Z) \\
+\end{aligned}
+$$
+
+This has the runtime $O(n^3 |N|^3)$ because the $l$ and $i$ loops $n$ times each, giving us $n^2$, then at the inner-most loop (for all $X \in N$) loops $|N|$ times, then $X \to YZ \in R$ has $|N|^2$ values to search through because these are $|N|$ choices for $Y$ and $|N|$ choices for $Z$. Then there are also $n$ choices to search through for $s$.
+
+#### Weaknesses of PCFGs
+
+PCFGs (as described above) don't perform very well; they have two main shortcomings:
+
+- Lack of sensitivity to lexical information
+    - that is, attachment is completely independent of the words themselves
+- Lack of sensitivity to structural frequencies
+    - for example, with the phrase "president of a company in Africa", "in Africa" can be attached to either "president" or "company". If we were to parse this phrase, we might come up with two trees described by exactly the same rule sets, the only difference is where the PP "in Africa" is attached to. Since they are exactly the same rule sets, they have the same probability, so the PCFG can't distinguish the two. However, statistically, the "close attachment" structure (i.e. generally the PP would attach to the closer object, in this case, "company") is more frequent, so it should be preferred.
+
+#### Lexicalized PCFGs
+
+Lexicalized PCFGs deal with the above weaknesses.
+
+For a non-terminal rule, we specify one its children as the "head" of the rule, which is essentially the most "important" part of the rule (e.g. for the rule $\text{VP} \to \text{Vt} \text{NP}$, the verb $\text{Vt}$ is the most important semantic part and thus the head).
+
+We define another set of rules which identifies the heads of our grammar's rules, e.g. "If the rule contains NN, NNS, or NNP, choose the rightmost NN, NNS, or NNP as the head".
+
+Now when we construct the tree, we annotate each node with its headword (that is, the word that is in the place of the head of a rule).
+
+For instance, say we have the following tree:
+
+```
+VP
+├── Vt
+│   └── questioned
+└── NP
+    ├── DT
+    │   └── the
+    └── NN
+        └── witness
+```
+
+We annotate each node with its headword:
+
+```
+VP(questioned)
+├── Vt(questioned)
+│   └── questioned
+└── NP(witness)
+    ├── DT(the)
+    │   └── the
+    └── NN(witness)
+        └── witness
+```
+
+We can revise our Chomsky Normal Form for lexicalized PCFGs by defining the rules in $R$ to have one of the following three forms:
+
+- $X(h) \to_1 Y_1(h) Y_2(w)$ for $X, Y_1, Y_2 \in N$ and $h,w \in \Sigma$
+- $X(h) \to_2 Y_1(w) Y_2(h)$ for $X, Y_1, Y_2 \in N$ and $h,w \in \Sigma$
+- $X(h) \to h$ for $X \in N, h \in \Sigma$
+
+Note the subscripts on $\to_1, \to_2$ which indicate which of the children is the head.
+
+##### Parsing lexicalized PCFGs
+
+That is, we consider rules with words, e.g. $\text{NN}(dog)$ is a different rule than $\text{NN}(cat)$. By doing so, we increase the number of possible rules to $O(|\Sigma|^2 |N|^3)$, which is a lot.
+
+However, given a sentence $w_1, w_2, \dots, w_n$, at most $O(n^2 |N|^3)$ rules are applicable because we can disregard any rule that does not contain one of $w_1, w_2, \dots, w_n$; this makes parsing lexicalized PCFGs a bit easier (it can be done in $O(N^5 |N|^3)$ time rather than $O(n^3|\Sigma|^2 |N|^3)$ time, which is the runtime if we consider all possible rules).
+
+##### Parameter estimatino in lexicalized PCFGs
+
+In a lexicalized PCFGs, our parameters take the form:
+
+$$
+q(\text{S}(\text{saw}) \to_2 \text{NP}(\text{man}) \text{VP}(\text{saw}))
+$$
+
+We decompose this parameter into a product of two parameters:
+
+$$
+q(\text{S} \to_2 \text{NP VP}|\text{S},\text{saw})q(\text{man}|\text{S} \to_2 \text{NP VP}, \text{saw})
+$$
+
+The first term describes: given $\text{S}(\text{saw})$, what is the probability that it expands $\to_2 \text{NP VP}$?
+
+The second term describes: given the rule $\text{S} \to_2 \text{NP VP}$ and the headword $\text{saw}$, what is the probability that $\text{man}$ is the headword of $\text{NP}$?
+
+Then we used smoothed estimation for the two parameter estimates (we're using linear interpolation):
+
+$$
+q(\text{S} \to_2 \text{NP VP}|\text{S},\text{saw}) = \lambda_1 q_{\text{ML}}(\text{S} \to_2 \text{NP VP}|\text{S, saw}) + \lambda_2 q_{\text{ML}}(\text{S} \to_2 \text{NP VP}|\text{S})
+$$
+
+Again, $\lambda_1, \lambda_2 \geq 0, \lambda_1 + \lambda_2 = 1$.
+
+To clarify:
+
+$$
+\begin{aligned}
+q_{\text{ML}}(\text{S} \to_2 \text{NP VP}|\text{S, saw}) &= \frac{\text{Count}(\text{S(saw)} \to_2 \text{NP VP})}{\text{Count}(\text{S(saw)})} \\
+q_{\text{ML}}(\text{S} \to_2 \text{NP VP}|\text{S}) &= \frac{\text{Count}(\text{S} \to_2 \text{NP VP})}{\text{Count}(\text{S})}
+\end{aligned}
+$$
+
+Here is the linear interpolation for the second parameter:
+
+$$
+q(\text{man}|\text{S} \to_2 \text{NP VP},\text{saw}) = \lambda_3 q_{\text{ML}}(\text{man}|\text{S} \to_2 \text{NP VP},\text{saw}) + \lambda_4 q_{\text{ML}}(\text{man}|\text{S} \to_2 \text{NP VP}) + \lambda_5 q_{\text{ML}}(\text{man}|\text{NP})
+$$
+
+Again, $\lambda_3, \lambda_4, \lambda_5 \geq 0, \lambda_3 + \lambda_4 + \lambda_5 = 1$.
+
+To clarify, $q_{\text{ML}}(\text{man}|\text{NP})$ describes: given $\text{NP}$, what is the probability that its headword is $\text{man}$?
+
+This presentation of PCFGs do not deal with the close attachment issue as described earlier, though there are modified forms which do.
+
+## Machine Translation
+
+### Challenges in machine translation
+
+- __lexical ambiguity__ (e.g. "bank" as financial institution, or as in a "river bank")
+- differing __word orders__ (e.g. English is subject-verb-object and Japanese is subject-object-verb)
+- __syntactic structure__ can vary across languages (e.g. "The bottle floated into the cave" when translated into Spanish has the literal meaning "the bottle entered the cave floating"; the verb "floated" becomes an adverb "floating" modifying "entered")
+- __syntactic ambiguity__ (e.g. "John hit the dog with the stick" can have two different translations depending on whether "with the stick" attaches to "John" or to "hit the dog")
+- __pronoun resolution__ (e.g. "The computer outputs the data; it is stored in ASCII" - what is "it" referring to?)
+
+### Classical machine translation methods
+
+Early machine translation methods used _direct_ machine translation, which involved translating word-by-word by using a set of rules for translating particular words. Once the words are translated, reordering rules are applied.
+
+But such rule-based systems quickly become unwieldy and fail to encompass the variety of ways words can be used in languages.
+
+There are also _transfer-based_ approaches, which have three phases:
+
+1. Analysis: analyze the source language sentence (e.g. a syntactic analysis to generate a parse tree)
+2. Transfer: convert the source-language parse tree to a target-language parse tree based on a set of rules
+3. Generation: convert the target-language parse tree to an output sentence
+
+Another approach is _interlingua-based_ translation, which involves two phases:
+
+1. Analysis: analyze the source language sentence into a language-independent representation of its meaning
+2. Generation: convert the meaning representation into an output sentence
+
+
+### Statistical machine translation methods
+
+If we have parallel corpora (parallel meaning that they "line up") for the source and target languages, we can use these as training sets for translation (that is, used a supervised learning approach rather than a rule-based one).
+
+#### The Noisy Channel Model
+
+The noisy channel model has two components:
+
+- $p(e)$, the language model (trained from just the target corpus, could be, for example, a trigram model)
+- $p(f|e)$, the translation model
+
+Where $e$ is a target language sentence (e.g. English) and $f$ is a source language sentence (e.g. French).
+
+We want to generate a model $p(e|f)$ which estimates the conditional probability of a target sentence $e$ given the source sentence $f$.
+
+So we have the following, using Bayes' Rule:
+
+$$
+\begin{aligned}
+p(e|f) &= \frac{p(e,f)}{p(f)} = \frac{p(e)p(f|e)}{\sum_e p(e)p(f|e)} \\
+\argmax_e p(e|f) &= \argmax_e p(e)p(f|e)
+\end{aligned}
+$$
+
+#### IBM translation models
+
+##### IBM Model 1
+
+We want to model $p(f|e)$, where $e$ is the source language sentence with $l$ words, and $f$ is the target language sentence with $m$ words.
+
+We say that an _alignment_ $a$ identifies which source word each target word originated from; that is, $a = \{a_1, \dots, \a_m \}$ where each $a_j \in \{0, \dots, l\}$, and if $a_j=0$ then it does not align to any word.
+
+There are $(l+1)^m$ possible alignments.
+
+Then we define models for $p(a|e,m)$ (the distribution of possible alignments) and $p(f|a,e,m)$, giving:
+
+$$
+\begin{aligned}
+p(f,a|e,m) &= p(a|e,m) p(f|a,e,m) \\
+p(f|e,m) &= \sum_{a \in A} p(a|e,m)p(f|a,e,m)
+\end{aligned}
+$$
+
+Where $A$ is the set of all possible alignments.
+
+We can also use the model $p(f,a|e,m)$ to get the distribution of alignments given two sentences:
+
+$$
+p(a|f,e,m) = \frac{p(f,a|e,m)}{\sum_{a \in A}p(f,a|e,m)}
+$$
+
+Which we can then use to compute the most likely alignment for a sentence pair $f, e$:
+
+$$
+a^* = \argmax_a p(a|f,e,m)
+$$
+
+When we start, we assume that all alignments $a$ are equally likely:
+
+$$
+p(a|e,m) = \frac{1}{(l+1)^m}
+$$
+
+Which is a big simplification but provides a starting point.
+
+We want to estimate $p(f|a,e,m)$, which is:
+
+$$
+p(f|a,e,m) = \prod_{j=1}^m t(f_j|e_{a_j})
+$$
+
+Where $t(f_j|e_{a_j})$ is the probability of the source word $e_{a_j}$ being aligned with $f_j$. These are the parameters we are interested in learning.
+
+So the general generative process is as follows:
+
+1. Pick an alignment $a$ with probability $\frac{1}{(l+1)^m}$
+2. Pick the target language words with probability:
+
+$$
+p(f|a,e,m) = \prod_{j=1}^m t(f_j|e_{a_j})
+$$
+
+Then we get our final model:
+
+$$
+p(f,a|e,m) = p(a|e,m) p(f|a,e,m) = \frac{1}{(l+1)^m} \prod_{j=1}^m t(f_j|e_{a_j})
+$$
+
+##### IBM Model 2
+
+An extension of IBM Model 1; it introduces alignment (also called _distortion_) parameters $q(i|j,l,m)$, which is the probability that the $j$th target word is connected to the $i$th source word. That is, we no longer assume alignments have uniform probability.
+
+We define:
+
+$$
+p(a|e,m) = \prod_{j=1}^m q(a_j|j,l,m)
+$$
+
+where $a = \{a_1, \dots, a_m\}$.
+
+This now gives us the following as our final model:
+
+$$
+p(f,a|e,m) = \prod_{i=1}^m q(a_j|j,l,m) t(f_j|e_{a_j})
+$$
+
+In overview, the generative process for IBM model 2 is:
+
+1. Pick an alignment $a = \{a_1, a_2, \dots, a_m \}$ with probability:
+
+$$
+\prod_{j=1}^m q(a_j | j,l,m)
+$$
+
+2. Pick the target language words with probability:
+
+$$
+p(f,a|e,m) = \prod_{j=1}^m t(f_j|e_{a_j})
+$$
+
+Which is equivalent to the final model described above.
+
+Then we can use this model to get the most likely alignment for any sentence pair:
+
+Given a sentence pair $e_1, e_2, \dots, e_l$ and $f_1, f_2, \dots, f_m$:
+
+$$
+a_j = \argmax_{a \in \{0, \dots, l\}} q(a|j,l,m) t(f_j|e_a)
+$$
+
+For $j = 1, \dots, m$.
+
+##### Estimating the $q$ and $t$ parameters
+
+We need to estimate our $q(i|j,l,m)$ and $t(f|e)$ parameters. We have a parallel corpus of sentence pairs, a single example of which is notated $(e^{(k)}, f^{(k)})$ for $k = 1, \dots, n$.
+
+Our training examples _do not_ have alignments annotated (if we did, we could just use maximum likelihood estimates, e.g. $t_{\text{ML}}(f|e) = \frac{\text{Count}(e,f)}{\text{Count}(e)}$ and $q_{\text{ML}}(j|i,l,m) = \frac{\text{Count}(j|i,l,m)}{\text{Count}(i,l,m)}$).
+
+We can use the Expectation Maximization algorithm to estimate these parameters.
+
+We initialize our $q$ and $t$ parameters to random values. Then we iteratively do the following until convergence:
+
+1. Compute "counts" based on the data and our current parameter estimates
+2. Re-estimate the parameters with these counts
+
+The amount we increment counts by is:
+
+$$
+\delta (k,i,j) = \frac{q(j|i,l_k,m_k)t(f_i^{(k)}|e_j^{(k)})}{\sum_{j=0}^{l_k} q(j|i,l_k,m_k)t(f_i^{(k)}|e_j^{(k)})}
+$$
+
+The algorithm for updating counts $c$ is:
+
+- For $k = 1, \dots, n$
+  - For $i=1, \dots, m_k$, for $j=0, \dots, l_k$
+    - $c(e_j^{(k)}, f_i^{(k)}) += \delta(k,i,j)$
+    - $c(e_j^{(k)}) += \delta(k,i,j)$
+    - $c(j|i,l,m) += \delta(k,i,j)$
+    - $c(i,l,m) += \delta(k,i,j)$
+
+Then recalculate the parameters:
+
+$$
+\begin{aligned}
+t(f|e) &= \frac{c(e,f)}{c(e)} \\
+q(j|i,l,m) &= \frac{c(j|i,l,m)}{c(i,l,m)}
+\end{aligned}
+$$
+
+
+##  References
 
 _Natural Language Processing_. Michael Collins. Columbia University/Coursera.
