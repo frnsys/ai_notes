@@ -844,7 +844,7 @@ We can use the Expectation Maximization algorithm to estimate these parameters.
 
 We initialize our $q$ and $t$ parameters to random values. Then we iteratively do the following until convergence:
 
-1. Compute "counts" based on the data and our current parameter estimates
+1. Compute "counts" (called _expected counts_) based on the data and our current parameter estimates
 2. Re-estimate the parameters with these counts
 
 The amount we increment counts by is:
@@ -870,6 +870,52 @@ t(f|e) &= \frac{c(e,f)}{c(e)} \\
 q(j|i,l,m) &= \frac{c(j|i,l,m)}{c(i,l,m)}
 \end{aligned}
 $$
+
+How does this method work?
+
+First we define the log-likelihood function as a function of our $t$ and $q$ parameters:
+
+$$
+L(t, q) = \sum_{k=1}^n \log p(f^{(k)}|e^{(k)}) = \sum_{k=1}^n \log \sum_a p(f^{(k)} a| e^{(k)})
+$$
+
+Which quantifies how well our current parameter estimates fit the data.
+
+So the maximum likelihood estimates are just:
+
+$$
+\argmax_{t,q} L(t,q)
+$$
+
+Though the EM algorithm will converge only to a local maximum of the log-likelihood function.
+
+
+## Phrase-Based Translation
+
+Phrase-based models must extract a _phrase-based (PB) lexicon_, which consists of pairs of matching phrases (consisting of one or more words), one from the source language, from the target language.
+
+This phrase lexicon can be learned from alignments.
+
+However, alignments are many-to-one; that is, multiple words in the target language can map to a single word in the source language, but the reverse cannot happen. A workaround is to learn alignments in both ways (i.e. from source to target and from target to source), then look at the intersections of these alignments as (a starting point) the phrase lexicon.
+
+This phrase lexicon can be expanded ("grown") through some heuristics (not covered here).
+
+This phrase lexicon can be noisy, so we want to apply some heuristics to clean it up. In particular, we want phrase pairs that are _consistent_. A phrase pair $(e,f)$ is consistent if:
+
+1. There is at least one word in $e$ aligned to a word in $f$
+2. There are no words in $f$ aligned to words outside $e$
+3. There are no words in $e$ aligned to words outside $f$
+
+We discard any phrase pairs that are not consistent.
+
+We can use these phrases to estimate the parameter $t(f|e)$ easily:
+
+$$
+t(f|e) = \frac{\text{Count}(f,e)}{\text{Count}(e)}
+$$
+
+
+
 
 
 ##  References
