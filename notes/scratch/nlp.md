@@ -914,9 +914,249 @@ $$
 t(f|e) = \frac{\text{Count}(f,e)}{\text{Count}(e)}
 $$
 
+We give each phrase pair $(f,e)$ a score $g(f,e)$. For example:
+
+$$
+g(f,e) = \log(\frac{\text{Count}(f,e)}{\text{Count}(e)})
+$$
+
+A phrase-based model consists of:
+
+- a phrase-based lexicon, with a way of computing a score for each phrase pair
+- a trigram language model with parameters $q(w|u,v)$
+- a _distortion parameter_ $\eta$, which is typically negative
 
 
+Given an input (source language) sentence $x_1, \dots, x_n$, a phrase is a tuple $(s,t,e)$ which indicates that the subsequence $x_s, \dots, x_t$ can be translated to the string $e$ in the target language using a phrase pair in the lexicon.
 
+We denote $P$ as the set of all phrases for a sentence.
+
+For any phrase $p$, $s(p), t(p), e(p)$ correspond to its components in the tuple. $g(p)$ is the score for the phrase.
+
+A _derivation_ $y$ is a finite sequence of phrases $p_1, p_2, \dots, p_L$ where each phrase is in $P$. The underlying translation defined by $y$ is denoted $e(y)$ (that is, $e(y)$ just represents the combined string of $y$'s phrases).
+
+For an input sentence $x = x_1, \dots, x_n$, we refer to the set of _valid derivations_ for $x$ as $Y(x)$. It is a set of all finite length sequences of phrases $p_1, p_2, \dots, p_L$ such that:
+
+- Each phrase $p_k, k \in \{1, \dots, L\}$ is a member of the set of phrases $P$
+- Each word in $x$ is translated exactly once
+- For all $k \in \{1, \dots, (L-1)\}, |t(p_k) + 1 - s(p_{k+1})| \leq d$ where $d \geq 0$ is a parameter of the model. We must also have $|1 - s(p_1) \leq d$. $d$ is the _distortion limit_ which constrains how far phrases can move (a typical value is $d=4$). Empirically, this results in better translations, and it also reduces the search space of possible translations.
+
+$Y(x)$ is exponential in size (it grows exponentially with sentence length), so it gets quite large.
+
+Now we want to score these derivations and select the highest-scoring one as the translation, i.e.
+
+$$
+\argmax_{y \in Y(x)} f(y)
+$$
+
+Where $f(y)$ is the scoring function. It typically involves a product of a language model and a translation model.
+
+In particular, we have the scoring function:
+
+$$
+f(y) = h(e(y)) + \sum_{k=1}^L g(p_k) + \sum_{k=0}^{L-1} \eta |t(p_k) + 1 - s(p_{k+1})
+$$
+
+Where $e(y)$ is the sequence of words in the translation, $h(e(y))$ is the score of the sequence of words under the language model (e.g. a trigram language model), $g(p_k)$ is the score for the phrase $p_k$, and the last summation is the _distortion score_, which penalizes distortions (so that we favor smaller distortions).
+
+We also define $t(p_0) = 0$.
+
+Because $Y(x)$ is exponential in size, we want to avoid a brute-force method for identifying the highest-scoring derivation. In fact, it is an NP-Hard problem, so we must apply a heuristic method - in particular, using beam search.
+
+For this algorithm, called the _Decoding Algorithm_, we keep a state as a tuple $(e_1, e_2, b, r, \alpha)$ where $e_1, e_2$ are target words, $b$ is a bit-string of length $n$ (that is, the same length of the input sentence) which indicates which words in the source sentence have been translated, $r$ is the integer specifying the endpoint of the last phrase in the state, and $\alpha$ is a score for the state.
+
+The initial state is $q_0 = (*,*,0^n,0,0)$, where $0^n$ is a bit-string of length $n$ with all zeros.
+
+We can represent the state of possible translations as a graph of these states, e.g. the source sentence has many initial possible translation states, which each also lead to many other possible states, etc. As mentioned earlier, this graph becomes far too large to brute-force search through.
+
+We define $ph(q)$ as a function which returns the set of phrases that can follow state $q$.
+
+For a phrase $p$ to be a member of $ph(q)$, it must satisfy the following:
+
+- $p$ must not overlap with the bit-string $b$, i.e. $b_i = 0$ for $i \in \{s(p), \dots, t(p)}$. This formalizes the fact that we don't want to translate the same word twice.
+- The distortion limit must not be violated (i.e. $|r + 1 - s(p)| \leq d$)
+
+We also define $\text{next}(q,p)$ to be the state formed by combining the state $q$ with the phrase $p$ (i.e. it is a transition function for the state graph).
+
+Formally, we have a state $q = (e_1, e_2, b, r, \alpha)$ and a phrase $p = (s,t,\epsilon_1, \dots, \epsilon_M)$ where $\epsilon_i$ is a word in the phrase. The transition function $\text{next}(q,p)$ yields the state $q' = (e_1', e_2', b', r', alpha'), defined as follows:
+
+- Define $\epsilon_{-1} = e_1, \epsilon_0 = e_2$
+- Define $e_1' = \epsilon_{M-1}, e_2' = \epsilon_M$
+- Define $b_i' = 1$ for $i \in \{s, \dots, t\}$. Define $b_i' = b_i$ for $i \notin \{s, \dots, t}$.
+- Define $r' = t$
+- Define:
+
+$$
+\alpha' = \alpha + g(p) + \sum_{i=1}^M \log q(\epsilon_i|\epsilon_{i-2}, \epsilon_{i-1}) + \eta |r+1-s|
+$$
+
+We also define a simple equality function, $eq(q, q')$ which returns true or false if the two states are equal, ignoring scores (that is, if all their components are equal, without requiring that their scores are equal).
+
+The final decoding algorithm:
+
+- Inputs:
+  - a sentence $x_1, \dots, x_n$
+  - a phrase-based model $(L, h, d, \eta)$, where $L$ is the lexicon, $h$ is the language model, $d$ is the distortion limit, and $\eta$ is the distortion parameter. This model defines the functions $ph(q)$ and $\text{next}(q,p)$.
+- Initialization: set $Q_0 = \{q_0\}, Q_i = \emptyset$ for $i = 1, \dots, n$, where $q_0$ is the initial state as defined earlier. Each $Q_i$ contains possible states in which $i$ words are translated.
+- For $i = 0, \dots, n-1$
+  - For each state $q \in \text{beam}(Q_i)$, for each phrase $p \in ph(q)$:
+    - $q' = \text{next}(q,p)$
+    - Add $\text{Add}(Q_i, q', q, p)$ where $i = \text{len}(q')$
+- Return: highest scoring state in $Q_n$. Backpointers can be used to find the underlying sequence of phrases.
+
+$\text{Add}(Q, q', q, p)$ is defined:
+
+- If there is some $q'' \in Q$ such that $eq(q'', q)$ is true:
+  - if $\alpha(q') > \alpha(q'')$
+    - $Q = \{q'\} \cup Q \ \{q''\}$ (remove the lower scoring state, add the higher scoring one)
+    - set $bp(q') = (q,p)$
+  - else return
+- Else
+  - $Q = Q \cup \{q'\}$
+  - set $bp(q') = (q,p)$
+
+That is, if we already have an equivalent state, keep the higher scoring of the two, and we keep a backpointer of how we got there.
+
+$\text{beam}(Q)$ is defined:
+
+First define $\alpha* = \argmax_{q \in Q} \alpha(q)$. We define $\beta \eq 0$ to be the _beam-width_ parameter. Then $\text{beam}(Q) = \{q \in Q : \alpha(q) \geq \alpha* - \beta \}$
+
+
+## Log-Linear Models
+
+When it comes to language models, the trigram model may be insufficient. There may be more information than just the previous two words that we want to take into account - for instance, the author of a paper, whether or not a particular word occurs in an earlier context, the part of speech of the preceding word, etc.
+
+We may want to do something similar when it comes to tagging, e.g. condition on that a previous word is a particular word, or that it has a particular ending ("ing", "e", etc), and so on.
+
+We can use __log-linear models__ to capture this extra information (encoded as numerical features, e.g. 1 if the preceding word is "foo", and 0 otherwise.).
+
+With log-linear models, we frame the problem as such: We have some input domain $X$ and a finite label set $Y$. We want to produce a conditional probability $p(y|x)$ for any $x,y$ where $x \in X, y \in Y$.
+
+For example, in language modeling, $x$ would be a "history" of words, i.e. $w_1, w_2, \dots, w_{i-1}$ and $y$ is an "outcome" $w_i$ (i.e. the predicted following word).
+
+We represent our features as vectors (applying indicator functions and so on where necessary). We'll denote a feature vector for an input/output pair $(x,y)$ as $f(x,y)$.
+
+We also have a parameter vector equal in length to our feature vectors (e.g. if we have $m$ features, then the parameter vector $v \in \mathbb R^m$).
+
+We can compute a "score" for a pair $(x,y)$ as just the dot product of these two: $v \cdot f(x,y)$ which we can turn into the desired conditional probability $p(x|y)$:
+
+$$
+p(y|x;v) = \frac{e^{v \cdot f(x,y)}}{\sum_{y' \in Y} e^{v \cdot f(x,y')}}
+$$
+
+Read as "the probability of $y$ given $x$ under the parameters $v$".
+
+This can be re-written as:
+
+$$
+\log p(y|x;v) = v \cdot f(x,y) - \log \sum_{y' \in Y} e^{v \cdot f(x,y')}
+$$
+
+This is why such models are called "log-linear": the $v \cdot f(x,y)$ term is the linear term and we calculate a log probability (and then there is the normalization term $\log \sum_{y' \in Y} e^{v \cdot f(x,y')}$).
+
+So how do we estimate the parameters $v$?
+
+We assume we have training examples $(x^{(i)}, y^{(i)})$ for $i=1, \dots, n$ and that each $(x^{(i)}, y^{(i)}) \in X \times Y$. We can use maximum-likelihood estimates to estimate $v$, i.e.
+
+$$
+\begin{aligned}
+v_{\text{ML}} &= \argmax_{v \in \mathbb R^m} L(v) \\
+L(v) &= \sum_{i=1}^n \log p(y^{(i)}|x^{(i)}; v) = \sum_{i=1}^n v \cdot f(x^{(i)}, y^{(i)}) - \sum_{i=1}^n \log \sum_{y' \in Y} e^{v \cdot f(x^{(i)}, y')}
+\end{aligned}
+$$
+
+i.e. $L(v)$ is the log-likelihood of the data under the parameters $v$, and it is concave so we can optimize it fairly easily with gradient ascent.
+
+We can add regularization to improve generalization.
+
+## The Brown et al. Word Clustering Algorithm
+
+The Brown clustering algorithm is an unsupervised method which take as input some large quantity of sentences, and from that, learns useful representations of words, outputting a hierarchical word clustering (e.g. weekdays and weekends might be clustered together, months may be clustered together, family relations may be clustered, etc).
+
+The general intuition is that similar words appear in similar contexts - that is, they have similar distributions of words to their immediate left and right.
+
+We have a set of all words seen in the corpus $V = \{w_1, w_2, \dots, w_T \}$. Say $C : V \to \{1,2,\dots,k\}$ is a partition of the vocabulary into $k$ classes (that is, $C$ maps each word to a class label).
+
+The model is as follows, where $C(w_0)$ is a special start state:$ is a special start state:
+
+$$
+p(w_1, w_2, \dots, w_T) = \prod_{i=1}^n e(w_i|C(w_i))q(C(w_i)|C(w_{i-1}))
+$$
+
+Which can be restated:
+$$
+\log p(w_1, w_2, \dots, w_T) = \sum_{i=1}^n \log e(w_i|C(w_i))q(C(w_i)|C(w_{i-1}))
+$$
+
+So we want to learn the parameters $e(v|c)$ for every $v \in V, c \in \{1, \dots, k \}$ and $q(c'|c)$ for every $c', c \in \{1, \dots, k\}$.
+
+We first need to measure the quality of a partition $C$:
+
+$$
+\begin{aligned}
+\text{Quality}(C) &= \sum_{i=1}^n \log e(w_i|C(w_i))q(C(w_i)|C(w_{i-1})) \\
+&= \sum_{c=1}^k \sum_{c'=1}^k p(c,c') \log \frac{p(c,c')}{p(c)p(c')} + G
+\end{aligned}
+$$
+
+Where $G$ is some constant. This basically computes the likelihood of this corpus under $C$.
+
+Here:
+
+$$
+p(c,c') = \frac{n(c,c')}{\sum_{c,c'} n(c,c')}, p(c) = \frac{n(c)}{\sum_c n(c)}
+$$
+
+Where $n(c)$ is the number of times class $c$ occurs in the corpus, $n(c,c')$ is the number of times $c'$ is seen following $c$, under the function $C$.
+
+The basic algorithm for Brown clustering is as follows:
+
+- Start with $|V|$ clusters (each word gets its own cluster, but by the end we will find $k$ clusters)
+- We run $|V|-k$ merge steps:
+  - At each merge step, we pick two clusters $c_i, c_j$ and merge them into a single cluster
+  - We greedily pick merges such that $\text{Quality}(C)$ for the clustering $C$ after the merge step is maximized at each stage
+
+This approach is inefficient: $O(|V|^5)$ though it can be improved to $O(|V|^3)$, which is still quite slow.
+
+There is a better way based on this approach:
+
+- We specify a parameter $m$, e.g. $m=1000$
+- We take the top $m$ most frequent words and puts each into its own cluster, $c_1, c_2, \dots, c_m$.
+- For $i = (m+1) \dots |V|$
+  - Create a new cluster $c_{m+1}$ for the $i$th most frequent word. We now have $m+1$ clusters
+  - Choose two clusters from $c_1, \dots, c_{m+1}$ to be merged, picking the merge that gives a max value for $\text{Quality}(C)$ (now we just have $m$ clusters again)
+- Carry out $(m-1)$ final merges to create a full hierarchy.
+
+This has the run time of $O(|V|m^2+n)$, where $n$ is the corpus length.
+
+## History-based models
+
+The models that have been presented so far are called __history-based models__, in the following sense:
+
+- We break structures down into a _derivation_ (a sequence of decisions)
+- Each decision has an associated conditional probability
+- The probability of a structure is just the product of the decision probabilities that created it
+- The parameter values are estimated using some variant of maximum-likelihood estimation
+- When choose $y$s such that they maximize either a joint probability $p(x,y;\theta)$ (e.g. in the case of HMMs or PCFGs) or a conditional probability $p(y|x;\theta)$ (in the case of log-linear models).
+
+
+## Global Linear Models
+
+GLMs extend log-linear models though they are different than history-based models (there are no "derivations" or probabilities for "decisions").
+
+In GLMs, we have feature vectors for _entire structures_, i.e. "global features". This allows us to incorporate features that are difficult to include in history-based models.
+
+GLMs have three components:
+
+- $f(x,y) \in \mathbb R^d$ which maps a structure $(x,y)$ (e.g. a sentence and a parse tree) to a feature vector$ to a feature vector$ to a feature vector$ to a feature vector
+- $\text{GEN}$ which is a function that maps an input $x$ to a set of _candidates_ $\text{GEN}(x)$. For example, it could return the set of all possible English translations for a French sentence $x$.
+- $v \in \mathbb R^d$ is a parameter vector; it is learned from training data
+
+So the final output is a function $F: X \to Y$, which ends up being:
+
+$$
+F(x) = \argmax_{y \in \text{GEN}(x)} f(x,y) \cdot v
+$$
 
 ##  References
 
