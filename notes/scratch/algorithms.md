@@ -475,6 +475,189 @@ Other algorithmic design methods:
 Primitives: there are some algorithms that are so fast that they are considered "primitives", i.e. to be used as building blocks for more complex algorithms.
 
 
+## Data Structures
+
+Motivation for data structures: to organize data so that it can be accessed quickly and usefully.
+
+For example: lists, stacks, queues, heaps, search trees, hashtables, bloom filters, etc.
+
+Different data structures are appropriate for different operations (and thus different kinds of problems).
+
+### Heaps
+
+A _heap_ (sometimes called a _priority queue_) is a container for objects that have keys; these keys are comparable (e.g. we can say that one key is bigger than another).
+
+Supported operations:
+
+- `insert`: add a new object to the heap, runtime $O(\log n)$
+- `extract-min`: remove the object with the minimum key value (ties broken arbitrarily), runtime $O(\log n)$
+
+Alternatively, there are max-heaps which return the maximum key value (this can be emulated by a heap by negating key values such that the max becomes the min, etc).
+
+Sometimes there are additional operations supported:
+
+- `heapify`: initialize a heap in linear time (i.e. $O(n)$ time, faster than inserting them one-by-one)
+- `delete`: delete an arbitrary element from the middle of the heap in $O(\log n)$ time
+
+For example, you can have a heap where events are your objects and their keys are a scheduled time to occur. Thus when you `extract-min` you always get the next event scheduled to occur.
+
+### Balanced Binary Search Tree
+
+A _balanced binary search tree_ can be thought of as a dynamic sorted array (i.e. a sorted array which supports `insert` and `delete` operations).
+
+First, consider sorted arrays. They support the following operations:
+
+- `search`: binary search, runtime $O(\log n)$
+- `select`: select an element by index, runtime $O(1)$
+- `min` and `max`: return first and last element of the array (respectively), runtime $O(1)$
+- `predecessor` and `successor`: return next smallest and next largest element of the array (respectively), runtime $O(1)$
+- `rank`: the number of elements less than or equal to a given value, runtime $O(\log n)$ (search for the given value and return the position)
+- `output`: output elements in sorted order, runtime $O(n)$ (since they are already sorted)
+
+With sorted arrays, insertion and deletions have $O(n)$ runtime, which is too slow.
+
+If you want more logarithmic-time insertions and deletions, we can use a balanced binary search tree. This supports the same operations as sorted arrays (though some are slower) in addition to faster insertions and deletions:
+
+- `search`: runtime $O(\log n)$
+- `select`: runtime $O(\log n)$ (slower than sorted arrays)
+- `min` and `max`: runtime $O(\log n)$ (slower than sorted arrays)
+- `predecessor` and `successor`: runtime $O(\log n)$ (slower than sorted arrays)
+- `rank`: runtime $O(\log n)$
+- `output`: runtime $O(n)$
+- `insert`: runtime $O(\log n)$
+- `delete`: runtime $O(\log n)$
+
+To understand how balanced binary search trees, first consider binary search trees.
+
+#### Binary Search Tree
+
+A binary search tree (BST) is a data structure for efficient searching.
+
+The keys that are stored are the nodes of the tree.
+
+Each node has three pointers: one to its parent, one to its left child, and one to its right child.
+
+These pointers can be null (e.g. the root node has no parent).
+
+The _search tree property_ asserts that for every node, all the keys stored in its left subtree should be less than its key, and all the keys in its right subtree should be greater than its key.
+
+You can also have a convention for handling equal keys (e.g. just put it on the left or the right subtree).
+
+This search tree property is what makes it very easy to search for particular values.
+
+Note that there are many possible binary search trees for a given set of keys. The same set of keys could be arranged as a very deep and narrow BST, or as a very shallow and wide one. The worst case is a depth of about $n$, which is more of a chain than a tree; the best case is a depth of about $\log_2 n$, which is perfectly _balanced_.
+
+This search tree property also makes insertion simple. You search for the key to be inserted, which will fail since the key is not in the tree yet, and you get a null pointer - you just assign that pointer to point to the new key. In the case of duplicates, you insert it according to whatever convention you decided on (as mentioned previously). This insert method maintains the search tree property.
+
+Search and insert performance are dependent on the depth of the tree, so at worst the runtime is $O(\text{height})$.
+
+The min and max operations are simple: go down the leftmost branch for the min key and go down the rightmost branch for the max key.
+
+The predecessor operation is a bit more complicated. First you search for the key in question. Then, if the key's node has a left subtree, just take the max of that subtree. However, if the key does not have a left subtree, move up the tree through its parent and ancestors until you find a node with a key less than the key in question. (The successor operation is accomplished in a similar way.)
+
+The deletion operation is tricky. First we must search for the key we want to delete. Then there are three possibilities:
+
+- the node has no children, so we can just delete it and be done
+- the node has one child; we can just delete the node and replace it with its child
+- the node has two children; we first compute the predecessor of the node, then swap it with the node, then delete the node
+
+For the select and rank operations, we can _augment_ our search tree by including additional information at each node: the size of its subtree, including itself (i.e. number of descendants + 1). Augmenting the data structure in this way does add some overhead, e.g. we have to maintain the data/keep it updated whenever we modify the tree.
+
+For select, we want to find the $i$th value of the data structure. Starting at a node $x$, say $a$ is the size of its left subtree. If $a = i-1$, return $x$. If $a \geq i$, recursively select the $i$th value of the left subtree. If $a < i-1$, recursively select the $(i-a-1)$th value of the right subtree.
+
+#### Balanced Binary Search Trees (Red-Black Trees)
+
+Balanced binary search trees have the "best" depth of about $\log_2 n$.
+
+There are different kinds of balanced binary search trees (which are all quite similar), here we will talk about red-black trees (other kinds are AVL trees, splaytrees, B trees, etc).
+
+Red-Black trees maintain some invariants/constraints which are what guarantee that the tree is balanced:
+
+1. each node stores an additional bit indicating if it is a "red" or "black" node
+2. the root is always black
+3. never allow two reds in a row (e.g. all of a red node's children are black)
+4. every path from the root node to a null pointer (e.g. an unsuccessful search) must go through the same number of black nodes
+
+Consider the following: for a binary search tree, if every root-null path has $\geq k$ nodes, then the tree includes at the top a perfectly balanced search tree of depth $k-1$. Thus there must be at least $2^k - 1$ nodes in the tree, i.e. $n \geq 2^k - 1$. We can restate this as $k \leq \log_2(n+1)$
+
+In a red-black tree, there is a root-null path with at most $log_2(n+1)$ black nodes (e.g. it can have a root-null path composed of only black nodes).
+
+The fourth constraint on red-black trees means that _every_ root-null path has $\leq log_2(n+1)$ black nodes. The third constraint means that we can never have more red nodes than black nodes (because the red nodes can never come one after the other) in a path. So at most a root-null path will have $\leq 2 log_2(n+1)$, which gives us a balanced tree.
+
+### Hash Tables
+
+_Hash tables_ (also called _dictionaries_) allow us to maintain a (possibly evolving) set of stuff.
+
+The core operations include:
+
+- `insert` using a key
+- `delete` using a key
+- `lookup` using a key
+
+When implemented properly, and on non-pathological data, these operations all run in $O(1)$ time.
+
+Hash tables do _not_ maintain any ordering.
+
+Basically, hash tables use some hash function to produce a hash for an object (some number); this hash is the "address" of the object in the hash table.
+
+More specifically, we have a hash function which gives us a value in some range $[0, n]$; we have an array of length $n$, so the hash function tells us and what index to place some object.
+
+There is a chance of _collisions_ in which two different objects produce the same hash.
+
+There are two main solutions for resolving collisions:
+
+- _(separate) chaining_: if there is a collision, store the objects together at that index as a list
+- _open addressing_: here, a hash function specifies a _sequence_ (called a _probe sequence_) instead of a single value. Try the first value, if its occupied, try the next, and so on.
+  - one strategy, _linear probing_, just has you try the hash value + 1 and keep incrementing by one until an empty bucket is found
+  - another is _double hashing_, in which you have two hash functions, you look at the first hash, if occupied, offset by the second hash until you find an empty bucket
+
+Each is more appropriate in different situations.
+
+The performance of a hash table depends a lot on the particular hash function. Ideally, we want a hash function that:
+
+- has good performance (i.e. low collisions)
+- should be easy to store
+- should be fast to evaluate (constant time)
+
+Designing hash functions is as much an art as it is a science. They are quite difficult to design.
+
+A hash table has a _load factor_ (sometimes just called _load_), denoted $\alpha = \frac{\text{# objects in hash table}}{\text{# buckets in hash table}}$.
+
+For hash table operations to run constant time, it is necessary that $\alpha = O(1)$. Ideally, it is less than 1, especially with open addressing.
+
+So for good performance, we need to control load. For example, if $\alpha$ passes some threshold, e.g. 0.75, then we may want to expand the hash table to lower the load.
+
+Every hash function has a "pathological" data set which it performs poorly on. There is no hash function which is guaranteed to spread out _every_ data set evenly (i.e. have low collisions on any arbitrary data set). You can often reverse engineer this pathological data set by analyzing the hash function.
+
+However, for some hash functions, it is "infeasible" to figure out its pathological data set (as is the case with cryptographic hash functions).
+
+One approach is to define a _family_ of hash functions, rather than just one, and randomly choose a hash function to use at runtime. This has the property that, on average, you do well across all datasets.
+
+### Bloom Filters
+
+Bloom filters are a variant on hash tables - they are more space efficient, but they allow for some errors (that is, there's a chance of a false positive). In some contexts, this is tolerable.
+
+They are more space efficient because they do not actually store the objects themselves. They are more commonly used to keep track of what objects have been seen so far. They typically do not support deletions (there are variants that do incorporate deletions but they are more complicated). There is also a small chance that it will say that it's seen an object that it hasn't (i.e. false positives).
+
+Like a hash table, a bloom filter consists of an array $A$, but each entry in the array is just one bit. Say we have a set of objects $S$ and the total number of bits $n$ - a bloom filter will use only $\frac{n}{|S|}$ bits per object in $S$.
+
+We also have $k$ hash functions $h_1, \dots, h_k$ (usually $k$ is small).
+
+The insert operation is defined:
+
+```python
+hash_funcs = [...]
+for i in range(k):
+  A[h[i](input)] = 1
+```
+
+That is, we just set the values of those bits to 1.
+
+Thus lookup is just to check that all the corresponding bits for an object are 1.
+
+We can't have any false negatives because those bits will not have been set and bits are never reset back to zero.
+
+False positives are possible, however, because some other objects may have in aggregate set the bits corresponding to another object.
 
 ## References
 
