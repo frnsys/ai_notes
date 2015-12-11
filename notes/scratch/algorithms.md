@@ -92,6 +92,14 @@ $$
 
 Average-case analysis and benchmarks requires some domain knowledge about what inputs to expect. When you want to do a more "general purpose" analysis, worst-case analysis is preferable.
 
+~~
+
+When comparing the performance of algorithms:
+
+- we measure the algorithm in terms of the _number of steps_ (operations) required, which provides a consistent measurement across machines (otherwise, some machines are more powerful and naturally perform faster)
+- algorithms may perform differently depending on characteristics of input data, e.g. if it is already partially sorted and so on. So we look at the _worst case_ scenario to compensate for this.
+- performance can change depending on the size of the input as well (for example, an algorithm $A$ which appears slower on a smaller dataset than $B$ may in fact be faster than $B$ on larger datasets), so we look at algorithmic performance as a function of input size, and look at the _asymptotic_ performance as the problem size increases.
+
 ### Other algorithmic analysis notes
 
 - Constant factors are typically ignored - this simplifies things, these constants can vary according to a lot of different factors (architecture, compiler, programmer), and in the end, it doesn't have much of an effect on the analysis.
@@ -107,6 +115,23 @@ With asymptotic analysis, we suppress constant factors and lower-order terms, si
 For example, we'd take our previous upper bound for merge sort, $6n \log_2 n + 6n$ and rewrite it as just $n \log n$ ($\log$ typically implies $\log_2$).
 
 Then we say the running time for merge sort is $O(n \log n)$, said "big-oh of $n \log n$", the $O$ implies that we have dropped the constant factors and lower-order terms.
+
+Generally, we categorize big-oh performance by _order of growth_, which define a set of algorithms that grow equivalently:
+
+| Order of growth | Name                      |
+|-----------------|---------------------------|
+| $O(1)$          | constant                  |
+| $O(\log_b n)$   | logarithmic (for any $b$) |
+| $O(n)$          | linear                    |
+| $O(n \log_b n)$ | $n \log n$                |
+| $O(n^2)$        | quadratic                 |
+| $O(n^3)$        | cubic                     |
+| $O(c^n)         | exponential (for any $c$) |
+
+The order of growth is determined by the _leading term_, that is, the term with the highest exponent.
+
+Note for $\log$, the base doesn't matter because it is equivalent to multiplying by a constant, which we ignore anyways.
+
 
 ### Loop examples
 
@@ -402,7 +427,9 @@ Which is just $O(n)$.
 
 ## Graphs
 
-Notation: $n$ is the number of vertices, $m$ is the number of edges.
+Notation: $n$ is the number of vertices, i.e. $|V|$, $m$ is the number of edges, i.e. $|E|$.
+
+Graph algorithm performance is typically a function of the number of vertices and the number of edges.
 
 For a connected graph with no parallel edges (i.e. each pair of vertices has only zero or one edge between it), $m$ is somewhere between $\Omega(n)$ and $O(n^2)$.
 
@@ -477,7 +504,7 @@ Primitives: there are some algorithms that are so fast that they are considered 
 
 ## Data Structures
 
-Motivation for data structures: to organize data so that it can be accessed quickly and usefully.
+Data structures are particular ways of organizing data that support certain operations. Structures have strengths and weaknesses in what kinds of operations they can perform, and how well they can perform them.
 
 For example: lists, stacks, queues, heaps, search trees, hashtables, bloom filters, etc.
 
@@ -662,3 +689,4 @@ False positives are possible, however, because some other objects may have in ag
 ## References
 
 - Algorithms: Design and Analysis, Part 1. Tim Roughgarden. Stanford/Coursera.
+- Think Complexity (Version 1.2.3). Allen B. Downey. 2012.

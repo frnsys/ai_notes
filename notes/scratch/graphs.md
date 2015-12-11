@@ -1,0 +1,3 @@
+- a _simple_ graph is a graph in which there are no loops and only single edges are allowed
+- a _regular_ graph is one in which each vertex has the same number of neighbors (i.e. the same degree)
+- a _complete_ graph is a simple graph where every pair of vertices is connected by an edge
