@@ -1,4 +1,4 @@
-__To see the notes, visit `[frnsys.com/ml_ai_notes](http://frnsys.com/ml_ai_notes/)`__
+__To see the notes, visit [frnsys.com/ml_ai_notes](http://frnsys.com/ml_ai_notes/)__
 
 This is a collection of my machine learning and artificial intelligence notes. It's very much a work-in-progress and large portions are very disorganized. I have tried to be diligent about references but a lot of them, especially earlier ones, may have fallen through the cracks...if I forgot to cite someone, let me know or submit a PR.
 
