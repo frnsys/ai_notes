@@ -1,4 +1,4 @@
-## The latest version of the notes are available online: [HTML](http://frnsys.com/ai_notes/) or [PDF](frnsys.com/ai_notes/ai_notes.pdf)
+## The latest version of the notes are available online: [HTML](http://frnsys.com/ai_notes/) or [PDF](http://frnsys.com/ai_notes/ai_notes.pdf)
 
 This is a collection of my machine learning and artificial intelligence notes. It's very much a work-in-progress and large portions are very disorganized. I have tried to be diligent about references but a lot of them, especially earlier ones, may have fallen through the cracks...if I forgot to cite someone, let me know or submit a PR.
 
