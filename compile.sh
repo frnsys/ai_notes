@@ -15,6 +15,7 @@ function compile_pdf {
     cd $SRC
 
     # Create working directory
+    rm -rf $WRK
     mkdir -p $WRK
 
     # Insert pagebreaks between documents.
@@ -38,19 +39,11 @@ function compile_pdf {
     python $WRK/postprocess.py $TEX $WRK/tmp.tex
 
     # Compile to PDF
+    # Run twice so table of contents works properly, see:
+    # <http://stackoverflow.com/questions/3863630/latex-tableofcontents-command-always-shows-blank-contents-on-first-build>
+    xelatex $WRK/tmp.tex
     xelatex $WRK/tmp.tex
     mv tmp.pdf $OUT
-
-    # sed command breakdown:
-    # First matching group:     \(!\[.*\](.*.\)
-    #   matches ![.*](.*
-    # Replacement target:       svg
-    # Second matching group:    \()\)
-    #   just matches the last parenthesis
-    # Replacement:
-    #   \1  => preserves first matching group
-    #   pdf => replaces svg with pdf
-    #   \2  => preserves second matching group
 }
 
 function compile_html {
