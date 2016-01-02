@@ -542,9 +542,10 @@ if __name__ == '__main__':
             name = method.__name__
             print(name)
 
-            if os.path.isdir(name):
-                shutil.rmtree(name)
-            os.makedirs(name)
+            path = 'outputs/{}'.format(name)
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+            os.makedirs(path)
 
             root = Node(**tree_data)
 
@@ -554,5 +555,5 @@ if __name__ == '__main__':
             else:
                 goal = Node(state='G')
                 for i, path in enumerate(method(root, goal=goal)):
-                    render(root, path=path, fname='{}/{}.png'.format(name, i))
+                    render(root, path=path, fname='outputs/{}/{}.png'.format(name, i))
                     subprocess.call(['./to_gif.sh', name])
