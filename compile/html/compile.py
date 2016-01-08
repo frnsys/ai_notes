@@ -54,6 +54,9 @@ SCRIPTS = '''
                     inlineMath: [["$","$"]],
                     displayMath: [['$$','$$']],
                     processEscapes: true
+                },
+                "HTML-CSS": {
+                    linebreaks: { automatic: true }
                 }
             });
             MathJax.Hub.Startup.onload();
