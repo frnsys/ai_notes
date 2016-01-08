@@ -1,5 +1,6 @@
 .DS_Store
 .ipynb_checkpoints
+dev
 update
 html_build
 *.pyc
