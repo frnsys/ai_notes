@@ -16,7 +16,7 @@ import yaml
 KWARG_RE = re.compile(r'([a-z]+)=([^\s}]+)')
 CLEAN_RE = re.compile(r'\s[^}]+')
 CMD_RES = [re.compile(r'\\DeclareMathOperator.+'),
-            re.compile(r'\\providecommand.+')]
+            re.compile(r'\\def.+')]
 FRONTMATTER_RE = re.compile(r'^---\n(.*?)\n---', re.DOTALL)
 
 

@@ -1,5 +1,6 @@
 .DS_Store
 .ipynb_checkpoints
+update
 html_build
 *.pyc
 *.swp

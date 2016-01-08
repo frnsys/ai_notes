@@ -2,7 +2,7 @@ DIR=$PWD
 SRC=$DIR/notes
 OUT=$DIR/notes.pdf
 CMP=$DIR/compile
-WRK=/tmp/ml_ai_notes
+WRK=/tmp/ai_notes
 TEX=$WRK/notes.tex
 
 
@@ -22,7 +22,7 @@ function compile_pdf {
     for f in *.md; do
         sed '$a\'$'\n''\\pagebreak'$'\n' "$f"
 
-    done > $WRK/ml_ai_notes.md
+    done > $WRK/ai_notes.md
 
     # Copy things over to working directory (bleh)
     cp $CMP/template.latex $WRK/
@@ -32,7 +32,7 @@ function compile_pdf {
     cd $WRK
 
     # Process markdown file
-    python $WRK/postprocess.py $WRK/ml_ai_notes.md $WRK/tmp.md
+    python $WRK/postprocess.py $WRK/ai_notes.md $WRK/tmp.md
 
     # Compile to .tex intermediary
     pandoc -s tmp.md --latex-engine=xelatex --template=template.latex --mathjax --highlight-style=pygments --chapters -o $TEX
@@ -66,7 +66,7 @@ elif [ $1 == 'html' ]; then
 
 else
     echo "Unrecognized format, please specify 'pdf' or 'html'"
+    exit
 fi
-
 
 echo "Compiled."
