@@ -421,7 +421,7 @@ if __name__ == '__main__':
         ]
     }
 
-    # from draw import render_tree
+    # from draw import render_tree, to_gif
     for type in methods.keys():
         print(type)
         for method in methods[type]:
@@ -438,7 +438,7 @@ if __name__ == '__main__':
                 solution = None
                 for i, path in enumerate(method(root, goal=goal)):
                     # this was used to render the gifs
-                    # render_tree(root, path=path, fname='/tmp/{}/{}.png'.format(name, i))
-                    # subprocess.call(['./utils/to_gif.sh', name])
+                    # render_tree(root, path=path, fname='/tmp/{}_{}.png'.format(name, i))
                     solution = path
+                # to_gif('/tmp/{}_*.png'.format(name), 'outputs/search/{}.gif'.format(name))
                 print('  ->', solution)

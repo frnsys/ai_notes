@@ -1,4 +1,5 @@
 import pydot
+import subprocess
 
 
 def render_tree(node, graph=None, path=[], fname=None, dist_func=None, ignore_value=True):
@@ -25,3 +26,14 @@ def render_tree(node, graph=None, path=[], fname=None, dist_func=None, ignore_va
         graph.write_png(fname)
 
     return n
+
+
+def to_gif(path, output):
+    """creates a gif from a directory of pngs"""
+    subprocess.call([
+        'convert',
+        '-delay', '1x5',
+        path,
+        '-layers', 'Optimize',
+        output
+    ])
