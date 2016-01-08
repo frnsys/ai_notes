@@ -1,0 +1,1 @@
+These are illustrative implementations of various machine learning algorithms and techniques; they're not meant to be efficient or optimized, but rather to be easy to understand.

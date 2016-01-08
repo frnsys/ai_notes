@@ -1,0 +1,106 @@
+{
+  "tree": {
+      "state": "S",
+      "children": [{
+          "state": "A",
+          "children": [{
+              "state": "B",
+              "children": [{
+                  "state": "C",
+                  "children": []
+              }, {
+                  "state": "J",
+                  "children": []
+              }]
+          }, {
+              "state": "F",
+              "children": [{
+                  "state": "H",
+                  "children": [{
+                      "state": "G",
+                      "children": []
+                  }]
+              }, {
+                  "state": "I",
+                  "children": []
+              }]
+
+          }]
+      }, {
+          "state": "E",
+          "children": [{
+              "state": "F",
+              "children": [{
+                  "state": "H",
+                  "children": [{
+                      "state": "G",
+                      "children": []
+                  }]
+              }, {
+                  "state": "I",
+                  "children": []
+              }]
+          }, {
+              "state": "D",
+              "children": []
+          }, {
+              "state": "K",
+              "children": []
+          }]
+      }, {
+          "state": "L",
+          "children": [{
+              "state": "G",
+              "children": []
+          }, {
+              "state": "O",
+              "children": [{
+                  "state": "M",
+                  "children": []
+              }, {
+                  "state": "N",
+                  "children": []
+              }]
+          }]
+      }]
+  },
+  "state": {
+    "values": {
+      "S": 0,
+      "G": 9,
+      "A": 4,
+      "B": 1,
+      "C": 3,
+      "D": 8,
+      "E": 5,
+      "F": 2,
+      "H": 7,
+      "I": 0,
+      "J": 2,
+      "K": 8,
+      "L": 4,
+      "M": 5,
+      "N": 3,
+      "O": 7
+    },
+    "positions": {
+      "S": [2,1],
+      "G": [6,3],
+      "A": [2,3],
+      "B": [3,4],
+      "C": [3,5],
+      "D": [0,4],
+      "E": [1,2],
+      "F": [2,5],
+      "H": [2,6],
+      "I": [3,6],
+      "J": [4,6],
+      "K": [2,4],
+      "L": [3,2],
+      "M": [4,5],
+      "N": [5,6],
+      "O": [4,3]
+    }
+  }
+}
+
