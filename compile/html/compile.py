@@ -164,7 +164,7 @@ if __name__ == '__main__':
 
         intro_text = FRONTMATTER_RE.sub('', intro_text)
         intro_text = LATEX_RE.sub('', intro_text)
-        intro_text = '# {title}\n## {author}\n#### {subtitle}\n\n{body}\n\n{toc}'.format(
+        intro_text = '# {title}\n## {author}\n#### {subtitle}\n\n{body}\n\n---\n\n## Contents\n\n{toc}'.format(
             title=title,
             author=author,
             subtitle=subtitle,
