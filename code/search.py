@@ -288,14 +288,16 @@ def iterative_deepening_astar(root, goal):
             thresh, new_path = ida(path + [child],
                                    length + distance(node, child),
                                    depth, seen)
-            if thresh < minimum:
+            if new_path is not None and thresh < minimum:
                 minimum = thresh
                 best_path = new_path
         return minimum, best_path
 
     solution = None
+    depth = heuristic(root, goal)
     while solution is None:
-        depth, solution = ida([root], 0, heuristic(root, goal), set())
+        depth, solution = ida([root], 0, depth, set())
+        depth += 1
     print(solution)
     return solution
 
