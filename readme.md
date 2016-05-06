@@ -5,3 +5,5 @@
 This repo contains the raw notes. If you want to see the notes in a nicer format, see the [HTML](http://frnsys.com/ai_notes/) and [PDF](http://frnsys.com/ai_notes/ai_notes.pdf) versions. If you want to compile it yourself, follow the instructions [here](compile/readme.md).
 
 The source files for graphics (Illustrator files and iPython notebooks) can be found in the `graphics` folder.
+
+![](graphics/cover/ai_notes.jpg)
