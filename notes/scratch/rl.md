@@ -270,7 +270,7 @@ Policy evaluation involves taking a policy and an MDP and computing the expected
 
 To solve this, we apply the Bellman expectation equation as an iterative update.
 
-We start off with some arbitrary value function $v_1$ (e.g. value of every state is 0), then, use _synchronous_ backups:
+We start off with some arbitrary value function $v_1$ (e.g. value of every state is 0), then, use _synchronous_ backups (i.e. consider each state in turn):
 
 - at each iteration $k+1$
 - for all states $s \in S$
@@ -281,3 +281,224 @@ v_{k+1}(s) = \sum_{a \in A} \pi(a|s) (R_s^a + \gamma \sum_{s' \in S} P_{ss'}^a v
 $$
 
 This eventually converges to $v_{\pi}$.
+
+### Policy iteration
+
+Now that we can evaluate a policy, we can figure out how to improve it.
+
+Given a policy $\pi$:
+
+- evaluate the policy $\pi$: $v_{\pi}(s) = E[R_{t+1} + \gamma R_{t+2}  + \dots | S_t = s]$
+- improve the policy by acting greedily wrt to $v_{\pi}$: $\pi' = \text{greedy}(v_{\pi})$ (greedy just means we move to the state with the highest value)
+
+And we can iteratively apply this approach (called _greedy policy improvement_), which will converge to the optimal policy $\pi^*$ (no matter how you start).
+
+![Policy iteration intuition [source](https://webdocs.cs.ualberta.ca/~sutton/book/ebook/node46.html)](assets/policy_iteration.png)
+
+The policy and the value function influence each other, since the policy dictates which states are explored and the value function influences how the policy chooses states, so they push off each other to convergence.
+
+With the greedy policy, we always choose the best state (remember that the value of a state takes into account future reward from that state as well!) so we update the value function for that state so that it is equal to or greater than it was before. This is how the greedy policy improves the value function.
+
+Because the value function drives the greed policy, that in turn improves the policy.
+
+Eventually the value function will only be equal to (rather than greater than or equal to) what it was before; at this point convergence is achieved.
+
+### Value iteration
+
+The solution $v_*(s)$ can be found with one-step lookahead:
+
+$$
+v_*(s) \leftarrow \max_{a \in A} (R_s^a + \gamma \sum_{s' \in S} P_{ss'}^a v_*(s'))
+$$
+
+Then apply these updates iteratively. This is _value iteration_.
+
+Basically we iterate over states and apply this update until convergence, giving us the optimal value function.
+
+The pseudocode is:
+
+- using synchronous backups
+    - at each iteration $k + 1$
+    - for all states $s \ in S$
+    - update $v_{k+1}(s)$ from $v_k(s')$
+- until convergence
+
+Unlike policy iteration, there is no explicit policy here, and the intermediate value functions may not correspond to any policy. But once we have $v_*(s)$ we get the optimal policy.
+
+### Asynchronous dynamic programming
+
+The methods so far have used synchronous backups, i.e. each iteration we look at and update every single state simultaneously before updating any state again.
+
+We can instead use _asynchronous backups_ in which states are backed up individually in any order, without waiting for other states to update. This can significantly reduce computation. As long as we continue to select all states (again, order doesn't matter), we will still have convergence.
+
+Three asynchronous dynamic programming methods:
+
+#### In-place dynamic programming
+
+Synchronous value iteration stores two copies of the value function, i.e. for all $s \in S$, we have:
+
+$$
+v_{\text{new}}(s) \leftarrow \max_{a \in A}(R_s^a + \gamma \sum_{s' \in S} P_{ss'}^a v_{\text{old}}(s'))
+$$
+
+_In-place_ value iteration, on the other hand, only stores one copy of the value function, i.e. for all $s \in S$, we instead have:
+
+$$
+v(s) \leftarrow \max_{a \in A}(R_s^a + \gamma \sum_{s' \in S} P_{ss'}^a v(s'))
+$$
+
+That is, we immediately update the value function and always use the newest value function.
+
+#### Prioritised sweeping
+
+Sometimes the order can affect how quickly you reach the optimal value function. _Prioritised sweeping_ uses the magnitude of the Bellman error to guide state selection, e.g.:
+
+$$
+|\max_{a \in A}(R_s^a + \gamma \sum_{s' \in S} P_{ss'}^a v(s')) - v(s)|
+$$
+
+We backup the state with the largest remaining Bellman error, then update the Bellman error of affected states after each backup.
+
+The magnitude of the Bellman error tells us how much our value estimate for that state changed; the intuition is that this change was really big, we want to attend to that state first, since will likely have a large influence on other values.
+
+#### Real-time dynamic programming
+
+With _real-time dynamic programming_ we only select and update the states that the agent actually visits.
+
+### Complexity
+
+These algorithms (i.e. algorithms based on the state-value function $v_{\pi}(s)$ or $v_*(s)$) have complexity $O(mn^2)$ per iteration for $m$ actions and $n$ states.
+
+Dynamic programming uses _full-width_ backups which means we consider _all_ actions and _all_ successor states (i.e. we consider the full branching factor), which is really expensive. Furthermore, to actually do these branch lookaheads we need to know the MDP transitions and reward function (i.e. have a model of the dynamics of the environment).
+
+So we run into the problem of dimensionality, where the number of states $n = |S|$ grows exponentially with the number of state variables. So this is not a great approach for larger problems.
+
+One way around this is by sampling - instead of considering the entire branching factor, we sample a single complete trajectory.
+
+But sometimes the problem is so big that even one backup is too expensive - in these cases, we can use _sample backups_, i.e. we start in a state, sample one action according to our policy, sample one transition according to our dynamics, etc, then backup this branch.
+
+With sample backups, because we are sampling from the dynamics of the environment, this also frees us from needing a model of the dynamics of the environment.
+
+## Model-free prediction
+
+We have an environment that can be represented as an MDP but we are not given the dynamics or reward function (i.e. we don't know what the MDP is). With _model-free_ prediction methods, we can still learn a value function even without this knowledge (i.e. without needing to model the environment).
+
+### Monte-Carlo learning
+
+Not necessarily efficient, but effective.
+
+MC methods learn directly from _complete_ episodes of experience. Note that MC methods must learn from episodes (i.e. they are only applicable to _episodic MDPs_, where episodes eventually terminate). So by "complete" episode, this means the episode is expanded to a terminal state. We do this a lot (each episode is a sample) and estimate the value of our start state as the mean return from these episodes.
+
+Note that the _return_ is the total discounted reward.
+
+The value function is usually the expected return (where $G_t$ is the return):
+
+$$
+v_{\pi}(s) = E_{\pi}[G_t | S_t = s]
+$$
+
+But Monte-Carlo policy evaluation uses the _empirical mean_ return instead of the expected return (i.e. as mentioned before, we collect sample episodes and compute the mean of their returns).
+
+So how do we get these empirical mean returns for _all_ states in the environment?
+
+There are two methods:
+
+- _first-visit_ Monte-Carlo policy evaluation: to evaluate a state $s$, the first time-step $t$ that state $s$ is visited in an episode (i.e. if the state is returned to later one, ignore), increment counter $N(s) \leftarrow N(s) + 1$, which tracks number of visits to the state, increment the total return $S(s) \leftarrow S(s) + G_t$, then the value is estimated as the mean return $V(s) = \frac{S(s)}{N(s)}$. By the law of large numbers, $V(s) \to v_{\pi}(s)$ as $N(s) \to \infty$; that is, with enough samples, this will converge on the true value.
+- _every-visit_ Monte-Carlo policy evaluation: same as the first-visit variant, except now we do these updates for _every_ visit to the state (instead of just the first)
+
+The mean can be computed incrementally, i.e. we can do it in an online fashion. The mean $\mu_1, \mu_2, \dots$ of a sequence $x_1, x_2, \dots$ can be computed incrementally:
+
+$$
+\begin{aligned}
+\mu_k &= \frac{1}{k} \sum_{j=1}^k x_j \\
+&= \frac{1}{k}(x_k + \sum_{j=1}^{k-1} x_j) \\
+&= \frac{1}{k} (x_k + (k-1) \mu_{k-1}) \\
+&= \mu_{k-1} + \frac{1}{k}(x_k - \mu_{k-1})
+\end{aligned}
+$$
+
+Using this, we'd change our $V(s)$ update to:
+
+$$
+V(s) \leftarrow V(s) + \frac{1}{N(s)} (G_t - V(s))
+$$
+
+For non-stationary problems (which is the typical case) we might want to have a running mean (i.e. forget old episodes):
+
+$$
+V(s) \leftarrow V(s) + \alpha (G_t - V(s))
+$$
+
+### Temporal Difference learning
+
+TD methods, like Monte Carlo learning, learns from episodes, but it can learn from _incomplete_ episodes by _bootstrapping_ (similar to dynamic programming). We substitute the rest of the trajectory (the rest of the episode, before it is finished) with an estimate of what will happen from that state onwards. You take another step, generating an estimate for that step and updating the previous estimate with what what you've learned from then new step.
+
+So whereas with Monte-Carlo learning we update $V(S_t)$ towards the _actual_ return $G_t$, with temporal-difference learning ($TD(0)$) we update $V(S_t)$ towards the _estimated_ return $R_{t+1} + \gamma V(S_{t+1})$ (like the Bellman equations):
+
+$$
+V(S_t) \leftarrow V(S_t) + \alpha (R_{t+1} + \gamma V(S_{t+1}) - V(S_t))
+$$
+
+$R_{t+1} + \gamma V(S_{t+1})$ is called the _TD target_.
+
+$\delta_t = R_{t+1} + \gamma V(S_{t+1}) - V(S_t)$ is called the _TD error_ (the difference between our estimate before and after taking the step).
+
+The fact that TD methods do not require complete methods means that it can be applied to non-terminating environments.
+
+TDs are often more efficient for Markov environments because they exploit the Markov property (assuming the current state summarizes all previous states). MC methods, on the other hand, do not exploit this property.
+
+Both MC and TD use samples, whereas dynamic programming does not (dynamic programming is exhaustive).
+
+### $TD(\lambda)$
+
+A compromise between TD (looks 1 step into the future) and MC (looks all the way to the end) is to look $n$ steps into the future (i.e. we observe $n$ steps and update the estimate $n$ steps in the past).
+
+So we define the $n$-step return as:
+
+$$
+G_t^{(n)} = R_{t+1} + \gamma R_{t+2} + \dots + \gamma^{n-1} R_{t+n} + \gamma^n V(S_{t+n})
+$$
+
+So $n$-step temporal-difference learning's update is:
+
+$$
+V(S_t) \leftarrow V(S_t) + \alpha (G_t^{(n)} - V(S_t))
+$$
+
+We don't have to commit to one value for $n$, we can actually average over $n$-step returns over different $n$. In fact, we can consider _all_ $n$ values with $TD(\lambda)$. Here, we compute the $\lambda$-return $G_t^{\lambda}$ which combines all $n$-step returns $G_t^{(n)}$:
+
+$$
+G_t^{\lambda} = (1 - \lambda) \sum_{n=1}^{\infty} \lambda^{n-1} G_t^{(n)}
+$$
+
+$\lambda$ takes a value from 0 to 1.
+
+So the update is (this is called _forward-view_ $TD(\lambda)$):
+
+$$
+V(S_t) \leftarrow V(S_t) + \alpha (G_t^{\lambda} - V(S_t))
+$$
+
+Note that like MC this can only be computed from complete episodes.
+
+There is _backward-view_ $TD(\lambda)$ which allows online updates at every step (i.e. from incomplete sequences).
+
+We compute _eligibility traces_ for the credit assignment problem. These combine the frequency heuristic (assign credit to the most frequent states) and the recency heuristic (assign credit to the most recent states):
+
+$$
+\begin{aligned}
+E_0(s) &= 0 \\
+E_t(s) &= \gamma \lambda E_{t-1}(s) + \mathbb{1}(S_t = s)
+\end{aligned}
+$$
+
+So in backward-view $TD(\lambda)$ we keep an eligibility trace for every state $s$. We update value $V(s)$ for every state $s$ in proportion to TD-error $\delta t$ and eligibility trace $E_t(s)$:
+
+$$
+\begin{aligned}
+\delta_t &= R_{t+1} + \gamma V(S_{t+1}) - V(S_t) \\
+V(s) \leftarrow V(s) + \alpha \delta_t E_t(s)
+\end{aligned}
+$$
+
+When $\lambda=0$ we have the "vanilla" TD algorithm as presented earlier.
