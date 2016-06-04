@@ -1393,4 +1393,304 @@ You can see it is similar to eligibility traces with value-based RL.
 
 This update can be applied online, to incomplete sequences.
 
+## Integrating Learning and Planning
 
+### Model-based RL
+
+Previously we learned value functions directly from experience, then we looked at how to learn policies directly from experience. Those methods were all model-free. Here we'll see how we can learn a model directly from experience; i.e. the agent learns the dynamics of the environment (i.e. the state transition function and the reward function).
+
+Then we can use that model to _plan_; i.e. construct a value function or policy by looking ahead/imagining/simulating what will happen in the future.
+
+The general idea:
+
+- the agent gains experience by interacting with the real world to learn a model for the world (i.e. an MDP)
+- the agent uses this model to plan (e.g. solve the learned MDP), generating a value function or a policy
+- the agent uses this value function or policy to decide how to act
+- repeat
+
+Advantages of model-based RL:
+
+- can be more compact than learning a value function or policy directly
+- can efficiently learn a model by supervised learning methods
+- can reason about model uncertainty
+
+Disadvantages:
+
+- first learn a model, the construct a value function: thus, two sources of approximation error
+
+Formally, a model $\mathcal M$ is a representation of an MDP $(\mathcal S, \mathcal A, \mathcal P, \mathcal R)$ parametrized by $\eta$.
+
+We assume the state space $\mathcal S$ and action space $\mathcal A$ are known (for now - there are forms of model-based RL that also learn the state and action spaces).
+
+So a model $\mathcal M = (\mathcal P_{\eta}, \mathcal R_{\eta})$ represents state transitions $\mathcal P_{\eta} \approx \mathcal P$ and rewards $\mathcal R_{\eta} \approx \mathcal R$.
+
+$$
+\begin{aligned}
+S_{t+1} &\sim \mathcal P_{\eta}(S_{t+1} | S_t, A_t) \\
+R_{t+1} &= \mathcal R_{\eta} (R_{t+1} | S_t, A_t)
+\end{aligned}
+$$
+
+We typically assume conditional independence between state transitions and rewards:
+
+$$
+\mathbb P [S_{t+1}, R_{t+1} | S_t, A_t] = \mathbb P [S_{t+1} | S_t, A_t] \mathbb P[R_{t+1} | S_t, A_t]
+$$
+
+So our goal is to estimate a model $M_{\eta}$ from experience $(S_1, A_1, R_2, \dots, S_T)$.
+
+This can be framed as a supervised learning problem:
+
+$$
+\begin{aligned}
+S_1, A_1 &\to R_2, S_2 \\
+S_2, A_2 &\to R_3, S_3 \\
+&\vdots \\
+S_{T-1}, A_{T-1} &\to R_T, S_T
+\end{aligned}
+$$
+
+Learning $s, a \to r$ is a regression problem, and learning $s, a \to s'$ is a density estimation problem (e.g. we learn a distribution over states).
+
+So we pick a loss function, e.g. mean-squared error, KL divergence, and the find the parameters $\eta$ that minimize empirical loss.
+
+Some example models:
+
+- table lookup model
+- linear expectation model
+- linear gaussian model
+- gaussian process model
+- deep belief network model
+- etc
+
+As a really simple example, consider a table lookup model.
+
+We can just model $\hat \mathcal P$ with counts, i.e. each time we end up in state $s'$ from state-action pair $s,a$, just increment the count of $s,a \to s'$ by 1. Then to use our model we just convert these counts into a probability distribution.
+
+Similarly, to model rewards we can just take the average reward received for state-action pair $s,a$.
+
+Alternatively, we can just record each experience tuple $(S_t, A_t, R_{t+1}, S_{t+1})$ at time $t$ and then, to sample the model, we just randomly pick a tuple matching $(s,a,\cdot,\cdot)$.
+
+### Planning with a model
+
+Given a model $\mathcal M_{\eta} = (\mathcal P_{\eta}, \mathcal R_{\eta})$, to plan we just solve the MDP $(\mathcal S, \mathcal A, \mathcal P_{\eta}, \mathcal R_{\eta})$ using a planning algorithm such as value iteration, policy iteration, tree search, etc.
+
+One such algorithm is _sample-based planning_, which is a simple but powerful approach. We use the model _only_ to generate samples, i.e. we sample experience from the model:
+
+$$
+\begin{aligned}
+S_{t+1} &\sim \mathcal P_{\eta}(S_{t+1} | S_t, A_t) \\
+R_{t+1} &= \mathcal R_{\eta}(R_{t+1} | S_t, A_t)
+\end{aligned}
+$$
+
+Then we apply model-free RL to the samples, e.g. Monte-Carlo control, Sarsa, Q-learning, etc.
+
+Sample-based planning methods are often more efficient because, by sampling, we consider experiences that are more likely to happen.
+
+This is basically the agent learning from the "imagined" or "simulated" world its learned from experience.
+
+It then acts based on its model-free learning and generates more experiences which further refine the model, which it then samples to learn a better value function or policy, which it then acts from, and so on.
+
+This can be extended to incorporate uncertainties with Bayesian model-based reinforcement learning (not covered here).
+
+The performance of model-based RL is limited to the optimal policy for the approximate MDP; i.e. it's only as good as the estimated model. So we have to consider the case where the model is imperfect/inaccurate, i.e. $(\mathcal P_{\eta}, \mathcal R_{\eta}) \neq (\mathcal P, \mathcal R)$, where a suboptimal policy will result.
+
+There are two solutions:
+
+- when the model is wrong, use model-free RL
+- or reason explicitly about the model's uncertainty (e.g. Bayesian methods)
+
+### Integrated architectures
+
+So we can generate experience in two ways:
+
+- real experience, i.e. sampled from the environment (the true MDP)
+- simulated experience, i.e. sampled from the model (the approximate MDP)
+
+Model-free RL has no model and _learns_ a value function (and/or policy) from _real_ experience.
+
+Model-based RL (here, using sample-based planning), learns a model from real experience and _plans_ a value function (and/or) policy from _simulated_ experience.
+
+We can combine model-free RL and model-based RL with the _Dyna_ architecture to make the most of both real and simulated experience:
+
+- learn a model from real experience
+- _learn and plan_ value function (and/or policy) from _real and simulated_ experience
+
+The canonical Dyna algorithm is the _Dyna-Q_ algorithm:
+
+- initialize $Q(s,a)$ and $\text{Model}(s,a)$ for all $s \in \mathcal S$ and $a \in \mathcal A(s)$
+- do forever:
+    - $S \leftarrow$ current (nonterminal) state
+    - $A \leftarrow \epsilon\text{-greedy}(S,Q)$
+    - execute action $A$, observe resulting reward $R$ and state $S'$
+    - $Q(S,A) \leftarrow Q(S,A) + \alpha[R + \gamma \max_a Q(S', a) - Q(S,A)]$
+    - $\text{Model}(S,A) \leftarrow R, S'$ (assuming deterministic environment)
+    - repeat $n$ times:
+        - $S \leftarrow$ random previously observed state
+        - $A \leftarrow$ random action previously taken in $S$
+        - $R,S' \leftarrow \text{Model}(S,A)$
+        - $Q(S,A) \leftarrow Q(S,A) + \alpha[R + \gamma \max_a Q(S', a) - Q(S,A)]$
+
+If you train a Dyna-Q agent in one environment and then change the environment on it, its model suddenly becomes inaccurate, but, if exploration is encouraged (there will be more on this later; but one simple variation is Dyna-Q+ in which a little bonus is assigned to unexplored states) then it can reorient itself fairly quickly.
+
+### Simulation-based search
+
+This part focuses on the planning part; i.e. expanding on sample-based planning.
+
+The key ideas are sampling and forward search.
+
+Forward search algorithms select the best action by lookahead. They build a search tree with the current state $s_t$ at the root and then use the model of the MDP to look ahead. So we don't need to solve the whole MDP, just the sub-MDP starting from the current state.
+
+_Simulation-based search_ is a forward search paradigm that uses sample-based planning. We simulate episodes of experience from the current state with the model, i.e.:
+
+$$
+\{s_t^k, A_t^k, R_{t+1}^k, \dots, S_T^k\}_{k=1}^K \sim \mathcal M_v
+$$
+
+then apply model-free RL to the simulated episodes, e.g.:
+
+- if we use Monte-Carlo control, we have _Monte-Carlo search_.
+- if we use Sarsa, we have _TD search_.
+
+#### Simple Monte-Carlo Search
+
+- given a model $\mathcal M_v$ and a _simulation policy_ $\pi$
+- for each action $a \in \mathcal A$
+    - simulate $K$ episodes from current (real) state $s_t$:
+
+$$
+\{s_t, A_t, R_{t+1}^k, S_{t+1}^k, A_{t+1}^k ,\dots, S_T^k\}_{k=1}^K \sim \mathcal M_v, \pi
+$$
+
+- evaluate actions by mean return (_Monte-Carlo evaluation_):
+
+$$
+Q(s_t, a) = \frac{1}{K} \sum_{k=1}^K G_t \to^P q_{\pi} (s_t, a)
+$$
+
+- select current (real) action with maximum value:
+
+$$
+a_t = \argmax_{a \in \mathcal A} Q(s_t, a)
+$$
+
+(this approach is "simple" because we aren't improving the simulation policy $\pi$ as we go)
+
+#### Monte-Carlo Tree Search
+
+At time of writing, this is a state-of-the-art search method.
+
+- given a model $\mathcal M_v$
+- simulate $K$ episodes from current state $s_t$ using current simulation policy $\pi$
+
+$$
+\{s_t, A_t, R_{t+1}^k, S_{t+1}^k, A_{t+1}^k ,\dots, S_T^k\}_{k=1}^K \sim \mathcal M_v, \pi
+$$
+
+- build a search tree containing visited states and actions
+- evaluate states $Q(s,a)$ by mean return of episodes from $s,a$ (Monte Carlo evaluation):
+
+$$
+Q(s,a) = \frac{1}{N(s,a)} \sum_{k=1}^K \sum_{u=t}^T \mathbb 1 (S_u, A_u = s,a) G_u \to^P q_{\pi}(s,a)
+$$
+
+(where $N(s,a)$ is the number of times the pair $s,a$ was encountered)
+
+- after search is finished, select current (real) action with maximum value in the search tree:
+
+$$
+a_t = \argmax_{a \in \mathcal A} Q(s_t,a)
+$$
+
+So now instead of just evaluating the root actions, as we did with simple Monte-Carlo search, we're evaluating _every_ state-action pair we visit.
+
+With MCTS, the simulation policy $\pi$ improves (again, we did not see this with simple Monte-Carlo search).
+
+Each simulation consists of two phases: _in-tree_ and _out-of-tree_:
+
+- _tree policy_ (improves): pick actions to maximize $Q(S,A)$. We can do this while we're "within" the tree
+- _default policy_ (fixed): pick actions randomly. We use this once we've gone "beyond" the tree (where we don't have any information)
+
+Repeat for each simulation:
+
+- evaluate states $Q(S,A)$ by Monte Carlo evaluation
+- improve tree policy, e.g. by $\epsilon\text{-greedy}(Q)$
+
+This is basically Monte-Carlo control applied to simulated episodes of experience, starting from the current (i.e. root) state.
+
+This converges on the optimal search tree, $Q(S,A) \to q_*(S,A)$
+
+For example: in a game of Go, white vs black, the agent is playing as black.
+
+Starting at the current state, it rolls out (sample) one episode to a terminal state and see that it wins ([images from here](http://www0.cs.ucl.ac.uk/staff/d.silver/web/Teaching_files/dyna.pdf)):
+
+![](assets/mcts_01.png)
+
+So according to our tree policy, we select the next state in that branch (since it's the highest valued at the moment), and roll out another episode starting from there. We get to a terminal state and see that it loses:
+
+![](assets/mcts_02.png)
+
+So from our tree policy we pick another state and roll an episode out from there; at the terminal state it wins:
+
+![](assets/mcts_03.png)
+
+So then our tree policy directs us to the next state in that branch and we roll out an episode from there; at the terminal state it loses:
+
+![](assets/mcts_04.png)
+
+So then from our tree policy we pick another state and roll out an episode from there; at the terminal state it wins:
+
+![](assets/mcts_05.png)
+
+and so on.
+
+(note that when I say our "from our tree policy we pick another state and roll an episode out from there", technically we are always restarting from the root, i.e. rolling the episode out from the root, but our tree policy directs us to choose actions in such a way that we end up on what is the most promising node)
+
+Advantages of MCTS:
+
+- highly selective best-first search: we search through the space is by what is most promising, so we are quite efficient.
+- evaluates states dynamically (unlike e.g. DP): we don't have to worry about the entire state space, only the states that are relevant to us now
+- uses sampling to break curse of dimensionality: we don't have to consider everything that could happen in the environment
+- works for "black-box" models: we only need samples
+- computationally efficient, anytime, parallelizable
+
+### Temporal-Difference search
+
+MCTS is just one example of a family of very effective search algorithms. The key ideas are to use forward search and sampling.
+
+For example, we can use TD instead of MC, i.e. we can use bootstrapping. So whereas MC tree search applies MC control to the sub-MDP from the current state, TD search applies Sarsa to the sub-MDP from the current state.
+
+For simulation-based search, as we saw in model-free reinforcement learning, bootstrapping is helpful:
+
+- TD search reduces variance but increases bias
+- TD search is usually more efficient than MC search
+- $TD(\lambda)$ search can be much more efficient than MC search
+
+TD search:
+
+- simulate episodes from current (real) state $s_t$
+- estimate action-value function $Q(s,a)$
+- for each step of simulation, update action-values by Sarsa:
+
+$$
+\Delta Q(S,A) = \alpha (R + \gamma Q(S', A') - Q(S,A))
+$$
+
+- select actions based on action-values $Q(s,a)$, e.g. $\epsilon$-greedy
+- you can also use function approximation for $Q$
+
+This is an especially nice approach for domains where there are many ways to arrive at a given state. With bootstrapping, you'll already have some knowledge about a state if you re-visit it through another trajectory.
+
+### Dyna-2
+
+_Dyna-2_ incorporates Dyna (using both real and simulated experience to learn and plan our value function and/or policy) with forward search. The agent stores two set of feature weights (i.e. two value functions):
+
+- long-term memory
+- short-term (working) memory
+
+Long-term memory is updated from real experience using TD learning (this can be thought of as general domain knowledge that applies to any episode).
+
+Short-term memory is updated from simulated experience using TD search (this can be thought of as specific local knowledge about the current situation).
+
+The value function is the sum of long and short-term memories.
