@@ -293,7 +293,7 @@ Given a policy $\pi$:
 
 And we can iteratively apply this approach (called _greedy policy improvement_), which will converge to the optimal policy $\pi^*$ (no matter how you start).
 
-![Policy iteration intuition [source](https://webdocs.cs.ualberta.ca/~sutton/book/ebook/node46.html)](assets/policy_iteration.png)
+![Policy iteration intuition from <https://webdocs.cs.ualberta.ca/~sutton/book/ebook/node46.html>](assets/policy_iteration.png)
 
 The policy and the value function influence each other, since the policy dictates which states are explored and the value function influences how the policy chooses states, so they push off each other to convergence.
 
@@ -1694,3 +1694,333 @@ Long-term memory is updated from real experience using TD learning (this can be 
 Short-term memory is updated from simulated experience using TD search (this can be thought of as specific local knowledge about the current situation).
 
 The value function is the sum of long and short-term memories.
+
+
+## Exploration and Exploitation
+
+How does a RL agent balance exploitation and exploration? That is, how do we balance making the best decision given what we know (exploitation) and gathering more information (exploration)?
+
+The best long-term strategy may involve sacrificing some short-term gains by exploring.
+
+Thus far we have just used the $\epsilon$-greedy method, but there are better ways.
+
+Broadly, there are three approaches:
+
+- random exploration
+    - explore random actions (e.g. $\epsilon$-greedy, softmax)
+- optimism in the face of uncertainty
+    - estimate uncertainty on value
+    - prefer to explore states/actions with highest uncertainty
+- information state space
+    - consider agent's information as part of its state
+    - lookahead to see how information helps reward
+    - this is the most "correct" way but also the most computationally difficult
+
+We can explore two different spaces:
+
+- state-action exploration
+    - systematically explore state-space/action-space
+    - e.g. pick different action $A$ each time $S$ is visited
+- parameter exploration
+    - parametrize policy $\pi(A|S,u)$
+    - e.g. pick different parameters and try for awhile
+    - advantage: consistent exploration
+    - disadvantage: doesn't know about state/action space
+
+We'll focus on state-action exploration.
+
+### Multi-armed bandits
+
+A very simplified version of the reinforcement learning problem is the _multi-armed bandit_ problem, which is useful for introducing concepts around exploration vs exploitation.
+
+A multi-armed bandit is a tuple $(\mathcal A, \mathcal R)$ (we don't have any states anymore).
+
+$\mathcal A$ is a known set of actions (also called "arms").
+
+$\mathcal R^a(r) = \mathbb P[R = r|A=a]$ is an unknown probability distribution over rewards.
+
+At each step $t$ the agent selects an action $A_t \in \mathcal A$. The environment then generates a reward $R_t \sim R^{A_t}$. The agent's goal is to maximize the cumulative reward $\sum_{\tau=1}^t R_{\tau}$.
+
+The _action-value_ is the mean reward for an action $a$:
+
+$$
+q(a) = \mathbb E[R|A=a]
+$$
+
+The _optimal value_ $v_*$ is:
+
+$$
+v_* = q(a^*) = \max_{a \in \mathcal A} q(a)
+$$
+
+The _regret_ is the opportunity loss for one step (i.e. the difference between the best we could have gotten and what we actually did get):
+
+$$
+l_t \ mathbb E[v_* - q(A_t)]
+$$
+
+The _total regret_ is the total opportunity loss:
+
+$$
+L_t = \mathbb E[ \sum_{\tau=1}^t v_* - q(A_{\tau})]
+$$
+
+So maximizing cumulative reward is equivalent to minimizing total regret.
+
+The _count_ $N_t(a)$ is the expected number of selections for action $a$.
+
+The _gap_ $\Delta_a$ is the difference in value between action $a$ and optimal action $a^*$, i.e. $\Delta_a = v_* - q(a)$.
+
+Regret is a function of gaps and the counts:
+
+$$
+\begin{aligned}
+L_t &= \mathbb E [\sum_{\tau=1}^t v_* - q(A_{\tau})] \\
+&= \sum_{a \in \mathcal A} \mathbb E [N_t(a)] (v_* - q(a)) \\
+&= \sum_{a \in \mathcal A} \mathbb E [N_t(a)] \Delta_a
+\end{aligned}
+$$
+
+So basically, we want to have small counts of large gaps (i.e. we want to take few actions that are much worse than the optimal action).
+
+However, we don't know what these gaps are.
+
+![](assets/total_regret.png)
+
+With strategies we've seen so far, e.g. greedy and $\epsilon$-greedy, total regret increases linearly - with the greedy strategy, where we _never_ explore, we may just get stuck with a suboptimal action, so total regret keeps accumulating; similarly with $\epsilon$-greedy, where we explore _forever_, we will always sometimes randomly choose an action which is most likely to be suboptimal (not much of a chance we randomly pick the optimal action). Ideally, we want to have a sublinear total regret (one that eventually stops increasing).
+
+#### Random exploration
+
+First let's go more into the greedy algorithm:
+
+- we consider algorithms that estimate $Q_t(a) \approx q(a)$.
+- we estimate the value of each action by Monte-Carlo evaluation, i.e.:
+
+$$
+Q_t(a) = \frac{1}{N_t(a)} \sum_{t=1}^T \mathbb 1 (A_t = a) R_t
+$$
+
+- the _greedy_ algorithm selects the action with the highest value, i.e.:
+
+$$
+A_t = \argmax_{a \in \mathcal A} Q_t(a)
+$$
+
+As mentioned before, this can lock onto a suboptimal action forever, so it has linear total regret.
+
+An enhancement on the greedy algorithm is the greedy algorithm with _optimistic initialization_, in which we initialize all values to the maximum possible, i.e. $Q(a) = r_{\text{max}}$; that is we assume all actions are really good (over time these assumptions get attenuated with the actual observations using Monte-Carlo evaluation), then we act greedily, i.e. $A_t = \argmax_{a \in \mathcal A} Q_t(a)$.
+
+Note that you can also initialize the counts $N_t(a)$ in addition to the values - this is how we can assert our confidence in these optimistic initializations (e.g. if we set $N_t(a)=1$ then we aren't very confident, but if we set it to $N_t(a)=1000$ then we are much more confident).
+
+This optimistic initialization encourages exploration of unknown values, which is great. But a few unlucky samples can also cause the algorithm to lock onto a suboptimal action (though in practice, this method can work very well). So this has linear total regret as well.
+
+Note that by assigning more confidence to the optimistic prior, you can withstand more unlucky samples and the algorithm will perform better.
+
+Now let's consider the $\epsilon$-greedy algorithm. As mentioned before, it has linear total regret. But we can easily make this sublinear by decaying $\epsilon$. For example, consider the following schedule:
+
+$$
+\begin{aligned}
+c &> 0 \\
+d &= \min_{a| \Delta_a > 0} \Delta_a \\
+\epsilon_t &= \min \{1, \frac{c|\mathcal A|}{d^2t}\}
+\end{aligned}
+$$
+
+This has logarithmic asymptotic total regret.
+
+In practice, that schedule is impossible because it requires knowledge of the gaps (i.e. of $v_*$), which we don't have.
+
+So ideally we want to find an algorithm with sublinear regret for any multi-armed bandit which does not require knowledge of $\mathcal R$.
+
+There is a lower bound to total regret (i.e. no algorithm can possibly do better than this lower bound), so we want to get as close to that lower bound as possible.
+
+The difficulty of a multi-armed bandit problem is in large part determined by the similarity between the optimal arm/action and the other arms/actions. That is, if suboptimal arms have a reward distribution very similar to the optimal one, it will take a long time to discern the optimal one (contrast to an easier situation where one arm is "obviously" optimal in that it consistently gives higher reward than all the other arms).
+
+We can describe this formally with the gap $\Delta_a$ and the similarity in distributions $KL(\mathcal R^a || \mathcal R^{a^*})$.
+
+Theorem (Lai and Robbins):
+
+Asymptotic total regret is at least logarithmic in number of steps:
+
+$$
+\lim_{t \to \infty} L_t \geq \log t \sum_{a| \Delta_a > 0} \frac{\Delta_a}{KL(\mathcal R^a || \mathcal R^{a^*})}.
+$$
+
+Intuitively, the larger the gap $\Delta_a$, the larger regret will occur, and is inversely proportional to the difference (KL divergence) in distributions (the less different they are, the more regret).
+
+#### Optimism in the face of uncertainty
+
+The principle of _optimism in the face of uncertainty_ states that we should not the action that is certain to be best, but the action that has the potential to be best.
+
+Consider the following example with three arms/actions:
+
+![](assets/optimism.png)
+
+We are most certain about $a_3$ and least certain about $a_1$. The principle of optimism in the face of uncertainty dictates that we should try $a_1$ even though our current mean for it is less than $a_3$ since it has the potential to yield higher rewards (i.e. it's possible that its mean is actually higher than $a_3$'s, we just don't know enough to be certain yet; this will be formalized in a bit). If the mean of $a_1$ is actually lower then $a_3$, eventually we'll realize this as we start to be more and more certain about its value through more experience. Then we'd switch back to $a_3$.
+
+More formally (for "potential to yield higher rewards"), we estimate an upper confidence $U_t(a)$ for each action value such that $q(a) \leq Q_t(a) + U_t(a)$ with high probability. This depends on the number of times $N(a)$ has been selected:
+
+- small $N_t(a) \to$ large $U_t(a)$ (estimated value is uncertain)
+- large $N_t(a) \to$ small $U_t(a)$ (estimated value is accurate)
+
+Then we select the action maximizing the _upper confidence bound_ (UCB):
+
+$$
+A_t = \argmax_{a \ in \mathcal A} Q_t(a) + U_t(a)
+$$
+
+In statistics, there is a theorem known as _Hoeffding's Inequality_:
+
+Let $X_1, \dots, X_t$ be iid random variables in $[0,1]$, and let $\bar X_t = \frac{1}{\tau} \sum_{\tau=1}^t X_{\tau}$ be the sample (empirical) mean. Then:
+
+$$
+\mathbb P[\mathbb E[X] > \bar X_t + u] \leq e^{-2tu^2}
+$$
+
+i.e. the probability that we're wrong in our estimate of the empirical mean by the amount $u$ is less than or equal to $e^{-2tu^2}$; this is true for _any_ distribution.
+
+We can apply Hoeffding's Inequality to the rewards of the bandit conditioned on selecting action $a$, i.e.:
+
+$$
+\mathbb P [q(a) > Q_t(a) + U_t(a)] \leq e^{-2N_t(a)U_t(a)^2}
+$$
+
+So we can pick a probability $p$ that the true value exceeds the UCB and then solve for $U_t(a)$:
+
+$$
+\begin{aligned}
+e^{-2N_t(a)U_t(a)^2} &= p \\
+U_t(a) &= \sqrt{\frac{-\log p}{2 N_t(a)}}
+\end{aligned}
+$$
+
+For example, we can set $p=0.05$ to get the 95% UCB.
+
+We can reduce $p$ as we observe reward, e.g. $p = t^{-4}$:
+
+$$
+U_t(a) = \sqrt{{2 \log t}{N_t(a)}}
+$$
+
+This ensures we select the optimal action as $t \to \infty$.
+
+This leads to the _UCB1 algorithm_:
+
+$$
+A_t = \argmax_{a \ in \mathcal A} Q_t(a) + \sqrt{{2 \log t}{N_t(a)}}
+$$
+
+This achieves a logarithmic asymptotic total regret.
+
+This was the frequentist approach to multi-armed bandits; we made no assumptions about the distributions of the bandits.
+
+##### Bayesian bandits
+
+Alternatively, we can use a Bayesian approach (_Bayesian bandits_) where we exploit prior knowledge about rewards, $p[\mathcal R^a]$.
+
+Consider a distribution $p[Q | w]$ over an action-value function with parameter $w$, e.g. we could assume the $Q$ functions are independent Gaussians: $w = [\mu_1, \sigma_1^2, \dots, \mu_k, \sigma_k^2]$ for $a \in [1,k]$.
+
+Bayesian methods compute a posterior distribution over $w$, $p[w|R_1, \dots, R_t]$. Then we use this posterior to guide exploration, e.g. through upper confidence bounds or probability matching. If the prior knowledge is accurate, we get better performance.
+
+So basically we describe $Q$ as a distribution which we parameterize with $w$.
+
+In more detail, the upper confidence bound method:
+
+- we use Bayes law to compute posterior $p[w | R_1, \dots, R_{t-1}]$
+- then we compute the posterior distribution over action-values $p[Q(a) | R_1, \dots, R_{t-1}] = p[Q(a)|w] p[w|R_1, \dots, R_{t-1}]$
+- then we estimate an upper confidence from the posterior, e.g. $U_t(a) = c \sigma(a)$, where $\sigma(a)$ is a standard deviation of $p(Q(a)|w)$, i.e. the upper confidence bound could be $c$ standard deviations from the mean
+- then we pick the action that maximizes $Q_t(a) + c \sigma(a)$
+
+So it's quite similar to UCB1, we just incorporate priors.
+
+Alternative to the UCB method, we can use _probability matching_, where we select an action $a$ according to the probability that $a$ is the optimal action:
+
+$$
+\pi(a) = \mathbb p[Q(a) = \max_{a'} Q(a') | R_1, \dots, R_{t-1}]
+$$
+
+Probability matching is optimistic in the face of uncertainty (uncertain action shave a higher probability of being max). But it can be difficult to compute $\pi(a)$ analytically from the posterior.
+
+To do this, we can use _Thompson sampling_, which is sample-based probability matching:
+
+$$
+\pi(a) = \mathbb E[\mathbb 1(Q(a) = \max_{a'} Q(a')) | R_1, \dots, R_{t-1}]
+$$
+
+We use Bayes law to compute the posterior distribution $p_q(Q|R_1, \dots, R_{t-1})$. Then we sample an action-value, i.e. a single value for $Q(a)$, from the posterior. Then we select the action associated with the maximum sample, $A_t = \argmax_{a \in \mathcal A} Q(a)$.
+
+For Bernoulli bandits, this achieves the Lai and Robbins lower bound on regret (i.e. it is optimal).
+
+Note that "optimism in the face of uncertainty" won't work where the action-space is infinite (it will forever explore and never end up exploiting anything) or when it is expensive to explore (this isn't very "safe" exploration, e.g. if you have an expensive robot, you don't want it trying _everything_).
+
+#### Information state space
+
+With exploration we gain information. If we could quantify the value of that information, we could compute the exploration-exploitation trade off perfectly (i.e. the long-term reward after getting information minus the immediate reward of exploitation).
+
+Information gain is higher in uncertain situations - for instance, if you already know everything about a situation, there's no information to be gained. So we want to explore uncertain situations more in the optimal way.
+
+We can introduce an _information state_ $\tilde {\mathcal S}$ summarizing all information accumulated so far.
+
+Each action $A$ causes a transition to a new information state $\tilde {\mathcal S}'$ (by adding information) with probability $\tilde {\mathcal P}_{\tilde {\mathcal S}, \tilde {\mathcal S}'}^A$.
+
+So now we have an MDP $\tilde {\mathcal M}$ in the augmented information state space:
+
+$$
+\tilde {\mathcal M} = (\tilde {\mathcal S}, \mathcal A, \tilde {\mathcal P}, \mathcal R, \gamma)
+$$
+
+For example, in a Bernoulli bandit (i.e. where there are only two outcomes, 0 or 1), we may have an information state $\tilde {\mathcal S} = (\alpha, \beta)$ where $\alpha_a$ counts the pulls of arm $a$ where the reward was 0 and $\beta_a$ counts the pulls of arm $a$ where the reward as 1.
+
+Now we have an infinite MDP, since there are infinitely many information states. We can solve this MDP with reinforcement learning, e.g. model-free reinforcement learning or Bayesian model-based reinforcement learning. The latter approach is known as _Bayes-adaptive_ RL, where we characterize our information state as a posterior distribution.
+
+For example, with Bernoulli bandits:
+
+- start with a $\text{Beta}(\alpha_a, \beta_a)$ prior over reward function $\mathcal R^a$
+- each time action $a$ is selected, update posterior for $\mathcal R^a$:
+    - $\text{Beta}(\alpha_a + 1, \beta_a)$ if reward is 0
+    - $\text{Beta}(\alpha_a, \beta_a + 1)$ if reward is 1
+- this defines transition function $\tilde {\mathcal P}$ for the Bayes-adaptive MDP
+- each information state $(\alpha, \beta)$ corresponds to a model $\text{Beta}(\alpha, \beta)$
+- each state transition corresponds to a Bayesian model update
+- solving the Bayes-adaptive MDP takes account of the value of information because the effect of new information is factored into the model update
+
+The Bernoulli case of the Bayes-adaptive MDP can be solved by dynamic programming; the solution is known as the _Gittins index_.
+
+Exactly solving a Bayes-adaptive MDP is typically intractable, but methods like large-scale (large state space) planning methods (e.g. Monte-Carlo tree search) can be applied.
+
+### Contextual bandits
+
+So far we've introduced state as only information state but we can bring in our previous notions of state as well.
+
+A _contextual bandit_ is a tuple $(\mathcal A, \mathcal S, \mathcal R)$.
+
+This is just like multi-arm bandits except that we've reintroduced states $\mathcal S$. $\mathcal S = \mathbb P[S]$ is an unknown distribution over states (also called "_contexts_").
+
+$\mathcal R_s^a(r) = \mathbb P[R=r |S=s, A=a]$ is an unknown probability distribution over rewards.
+
+At each step $t$:
+
+- environment generates state $S_t \sim \mathcal S$
+- agent selects action $A_t \in \mathcal A$
+- environment generates reward $R_t \sim \mathcal R_{S_t}^{A_t}$
+
+The goal is to maximize cumulative reward $\sum_{\tau=1}^t R_{\tau}$.
+
+(not covered in lecture)
+
+
+### Extending to MDPs
+
+The UCB approach can be generalized to full MDPs to give a model-free RL algorithm, i.e. we can maximize the upper confidence bound on the action-value function:
+
+$$
+A_t = \argmax_{a \in \mathcal A} A(S_t, a) + U(S_t, a)
+$$
+
+One thing worth noting is that this ignores that, in MDPs, the policy will likely improve (if we're doing control with the MDP) and the $Q$ values will get better. So the uncertainty should take into account that the $Q$ value might be wrong not only because of the uncertainty in the estimate (e.g. because the policy evaluation isn't good yet) but also because the policy may still have a lot of improving to do.
+
+You can also extend the general "optimism in the face of uncertainty" approach by replacing the reward for unknown or poorly estimated states with $r_max$, then just solve the MDP with some planning algorithm (e.g. policy iteration, value iteration, tree search, etc). An example of this is the _Rmax algorithm_.
+
+The information state space approach can also be extended to MDPs. Here, the augmented state is now $\tilde S = (S,I)$ where $S$ is the original state within the MDP and $I$ is the accumulated information. The Bayes-adaptive approach maintains a posterior model corresponding to each augmented state, $\mathbb P[\mathcal P, \mathcal R|I]$. Solving the Bayes-adaptive MDP finds the optimal exploration/exploitation trade-off with respect to prior, so this is the "correct" approach. Like before, the augmented MDP is typically enormous, but Monte-Carlo tree search has proven effective here.
+
+

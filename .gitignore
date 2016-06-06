@@ -6,4 +6,4 @@ html_build
 *.pyc
 *.swp
 *.pdf
-scratch
+_scratch
