@@ -64,6 +64,25 @@ SCRIPTS = '''
     </script>
 '''
 
+INTRO_TEXT = '''
+# {title}
+## {author}
+#### {subtitle}
+
+{body}
+
+---
+
+## Contents
+
+{toc}
+
+---
+
+[Additional notes which haven't yet been organized or edited](scratch)
+
+'''
+
 def to_html(md, title, outfile):
     path_to_top = '/'.join(['..' for i in range(len(outfile.split('/'))-1)])
     if path_to_top:
@@ -164,7 +183,7 @@ if __name__ == '__main__':
 
         intro_text = FRONTMATTER_RE.sub('', intro_text)
         intro_text = LATEX_RE.sub('', intro_text)
-        intro_text = '# {title}\n## {author}\n#### {subtitle}\n\n{body}\n\n---\n\n## Contents\n\n{toc}'.format(
+        intro_text = INTRO_TEXT.format(
             title=title,
             author=author,
             subtitle=subtitle,
@@ -176,3 +195,18 @@ if __name__ == '__main__':
     # Copy over assets
     shutil.copytree('notes/assets', os.path.join(OUT_DIR, 'assets'))
     shutil.copy('compile/html/style.css', os.path.join(OUT_DIR, 'style.css'))
+
+    # Build scratch directory
+    os.makedirs(os.path.join(OUT_DIR, 'scratch'))
+    scratch_notes = []
+    for file in glob('notes/scratch/*.md'):
+        note = os.path.basename(file)
+        name, ext = os.path.splitext(note)
+        with open(file, 'r') as f:
+            text = f.read()
+        text = ASSET_RE.sub('../assets/', text)
+        scratch_notes.append((name, '{}.html'.format(name)))
+        to_html(text, name, 'scratch/{}.html'.format(name))
+    with open(os.path.join(OUT_DIR, 'scratch/index.html'), 'w') as f:
+        links = ['<li><a href="{}">{}</a></li>'.format(file, name) for name, file in scratch_notes]
+        f.write('<ul>{}</ul>'.format('\n'.join(links)))
