@@ -21,3 +21,7 @@ s(i) = \frac{1}{n} \sum_{j=0}^n d_s (i, p_{i,j})
 $$
 
 where $d_s$ is the domain-dependent measure of behavioral difference between an individual and its expectation and $p_{i,j}$ is the $j$-closest prediction point (expectation) to individual $i$.
+
+---
+
+see also: Liapis, A., Yannakakis, G. N., & Togelius, J. (2015). [Constrained novelty search: A study on game content generation](http://julian.togelius.com/Liapis2014Constrained.pdf_. Evolutionary computation, 23(1), 101-129.
