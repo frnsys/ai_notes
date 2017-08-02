@@ -44,22 +44,20 @@ HTML_TEMPLATE = '''
 
 SCRIPTS = '''
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-    <script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.8.0/highlight.min.js"></script>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            tex2jax: {
+                inlineMath: [["$","$"]],
+                displayMath: [['$$','$$']],
+                processEscapes: true
+            }
+        });
+    </script>
     <script>
         $(document).ready(function() {
             $('pre').each(function(i, e) {hljs.highlightBlock(e)});
-            MathJax.Hub.Config({
-                tex2jax: {
-                    inlineMath: [["$","$"]],
-                    displayMath: [['$$','$$']],
-                    processEscapes: true
-                },
-                "HTML-CSS": {
-                    linebreaks: { automatic: true }
-                }
-            });
-            MathJax.Hub.Startup.onload();
         });
     </script>
 '''
